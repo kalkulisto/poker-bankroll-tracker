@@ -675,7 +675,17 @@ function openEntryModal(tid){
   openModal('entry-modal');
 }
 
-async function saveEntry(){const body={result_position:parseInt(document.getElementById('e-position').value)||null,prize_money:parseFloat(document.getElementById('e-prize').value)||0,notes:document.getElementById('e-notes').value||null};try{await api(`/tournaments/${entryTournamentId}/entry`,'PUT',body);closeModal('entry-modal');await loadTournaments();}catch(e){alert('Fehler beim Speichern: '+(e.detail||JSON.stringify(e)));console.error(e);}}
+async function saveEntry(){
+  const body={result_position:parseInt(document.getElementById('e-position').value)||null,prize_money:parseFloat(document.getElementById('e-prize').value)||0,notes:document.getElementById('e-notes').value||null};
+  try{
+    await api(`/tournaments/${entryTournamentId}/entry`,'PUT',body);
+  }catch(e){
+    alert('Fehler beim Speichern: '+(e.detail||JSON.stringify(e)));
+    return;
+  }
+  closeModal('entry-modal');
+  try{ await loadTournaments(); }catch(e){ console.error('Render error:',e); location.reload(); }
+}
 async function removeEntry(){if(!confirm('Anmeldung entfernen?'))return;await api(`/tournaments/${entryTournamentId}/entry`,'DELETE');closeModal('entry-modal');await loadTournaments();}
 
 // ── RANGLISTE ──
