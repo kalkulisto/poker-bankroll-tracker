@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from database import get_db, User
+from datetime import datetime
+import sheets
 from auth import hash_pin, create_token, get_current_user, require_admin
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -19,45 +19,46 @@ class CreateUserRequest(BaseModel):
 
 
 @router.get("/users")
-def list_users(db: Session = Depends(get_db)):
-    users = db.query(User).all()
-    return [{"id": u.id, "name": u.name, "is_admin": u.is_admin} for u in users]
+def list_users():
+    users = sheets.all_rows("poker_users")
+    return [{"id": int(u["id"]), "name": u["name"], "is_admin": str(u["is_admin"]).lower() == "true"} for u in users]
 
 
 @router.post("/login")
-def login(req: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.name == req.name).first()
-    if not user or user.pin_hash != hash_pin(req.pin):
+def login(req: LoginRequest):
+    users = sheets.all_rows("poker_users")
+    user = next((u for u in users if u["name"] == req.name), None)
+    if not user or user["pin_hash"] != hash_pin(req.pin):
         raise HTTPException(status_code=401, detail="Falscher Name oder PIN")
+    uid = int(user["id"])
     return {
-        "token": create_token(user.id),
-        "user": {"id": user.id, "name": user.name, "is_admin": user.is_admin}
+        "token": create_token(uid),
+        "user": {"id": uid, "name": user["name"], "is_admin": str(user["is_admin"]).lower() == "true"}
     }
 
 
 @router.get("/me")
-def me(current_user: User = Depends(get_current_user)):
-    return {"id": current_user.id, "name": current_user.name, "is_admin": current_user.is_admin}
+def me(current_user: dict = Depends(get_current_user)):
+    return {"id": int(current_user["id"]), "name": current_user["name"], "is_admin": str(current_user["is_admin"]).lower() == "true"}
 
 
 @router.post("/users")
-def create_user(req: CreateUserRequest, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
-    if db.query(User).filter(User.name == req.name).first():
+def create_user(req: CreateUserRequest, admin: dict = Depends(require_admin)):
+    users = sheets.all_rows("poker_users")
+    if any(u["name"] == req.name for u in users):
         raise HTTPException(status_code=400, detail="Name bereits vergeben")
-    user = User(name=req.name, pin_hash=hash_pin(req.pin), is_admin=req.is_admin)
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return {"id": user.id, "name": user.name, "is_admin": user.is_admin}
+    uid = sheets.next_id("poker_users")
+    data = {
+        "id": uid, "name": req.name, "pin_hash": hash_pin(req.pin),
+        "is_admin": str(req.is_admin), "created_at": datetime.utcnow().isoformat()
+    }
+    sheets.insert_row("poker_users", data)
+    return {"id": uid, "name": req.name, "is_admin": req.is_admin}
 
 
 @router.put("/users/{user_id}/pin")
-def change_pin(user_id: int, body: dict, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.id != user_id and not current_user.is_admin:
+def change_pin(user_id: int, body: dict, current_user: dict = Depends(get_current_user)):
+    if int(current_user["id"]) != user_id and str(current_user.get("is_admin", "")).lower() != "true":
         raise HTTPException(status_code=403, detail="Keine Berechtigung")
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Nicht gefunden")
-    user.pin_hash = hash_pin(body["new_pin"])
-    db.commit()
+    sheets.update_row("poker_users", user_id, {"pin_hash": hash_pin(body["new_pin"])})
     return {"ok": True}

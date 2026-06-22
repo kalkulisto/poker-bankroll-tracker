@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy.orm import Session as DBSession
 from typing import Optional
-from datetime import date
-from database import get_db, Tournament, TournamentEntry, User
+from datetime import date, datetime
+import sheets
 from auth import get_current_user
 
 router = APIRouter(prefix="/tournaments", tags=["tournaments"])
@@ -26,138 +25,125 @@ class EntryUpsert(BaseModel):
     notes: Optional[str] = None
 
 
-def tournament_to_dict(t: Tournament, user_entry: Optional[TournamentEntry] = None) -> dict:
+def t_dict(t: dict, entry: dict | None = None) -> dict:
+    users = sheets.all_rows("poker_users")
+    creator = next((u for u in users if str(u["id"]) == str(t["created_by"])), None)
     return {
-        "id": t.id,
-        "name": t.name,
-        "series": t.series,
-        "location": t.location,
-        "start_date": t.start_date.isoformat() if t.start_date else None,
-        "end_date": t.end_date.isoformat() if t.end_date else None,
-        "buy_in": t.buy_in,
-        "game_type": t.game_type,
-        "is_global": t.is_global,
-        "created_by_name": t.creator.name if t.creator else "System",
+        "id": int(t["id"]),
+        "name": t["name"],
+        "series": t["series"] or None,
+        "location": t["location"] or None,
+        "start_date": t["start_date"] or None,
+        "end_date": t["end_date"] or None,
+        "buy_in": float(t["buy_in"]) if t["buy_in"] else None,
+        "game_type": t["game_type"],
+        "is_global": str(t["is_global"]).lower() == "true",
+        "created_by_name": creator["name"] if creator else "System",
         "entry": {
-            "id": user_entry.id,
-            "result_position": user_entry.result_position,
-            "prize_money": user_entry.prize_money,
-            "notes": user_entry.notes,
-        } if user_entry else None,
+            "id": int(entry["id"]),
+            "result_position": int(entry["result_position"]) if entry["result_position"] else None,
+            "prize_money": float(entry["prize_money"]) if entry["prize_money"] else 0.0,
+            "notes": entry["notes"] or None,
+        } if entry else None,
     }
 
 
 @router.get("/")
-def get_tournaments(db: DBSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    tournaments = db.query(Tournament).filter(
-        (Tournament.is_global == True) | (Tournament.created_by == current_user.id)
-    ).order_by(Tournament.start_date.asc()).all()
+def get_tournaments(current_user: dict = Depends(get_current_user)):
+    uid = int(current_user["id"])
+    tournaments = sheets.all_rows("poker_tournaments")
+    entries = sheets.all_rows("poker_entries")
 
     result = []
     for t in tournaments:
-        entry = db.query(TournamentEntry).filter(
-            TournamentEntry.tournament_id == t.id,
-            TournamentEntry.user_id == current_user.id
-        ).first()
-        result.append(tournament_to_dict(t, entry))
-    return result
+        is_global = str(t["is_global"]).lower() == "true"
+        created_by = int(t["created_by"]) if t["created_by"] else None
+        if not is_global and created_by != uid:
+            continue
+        entry = next((e for e in entries if int(e["tournament_id"]) == int(t["id"]) and int(e["user_id"]) == uid), None)
+        result.append(t_dict(t, entry))
+
+    return sorted(result, key=lambda x: x["start_date"] or "9999", reverse=False)
 
 
 @router.post("/")
-def create_tournament(
-    req: TournamentCreate,
-    db: DBSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    if req.is_global and not current_user.is_admin:
+def create_tournament(req: TournamentCreate, current_user: dict = Depends(get_current_user)):
+    if req.is_global and str(current_user.get("is_admin", "")).lower() != "true":
         raise HTTPException(status_code=403, detail="Nur Admins können globale Turniere anlegen")
-    t = Tournament(created_by=current_user.id, **req.model_dump())
-    db.add(t)
-    db.commit()
-    db.refresh(t)
-    return tournament_to_dict(t)
+    tid = sheets.next_id("poker_tournaments")
+    data = {
+        "id": tid, "name": req.name, "series": req.series or "",
+        "location": req.location or "", "start_date": str(req.start_date) if req.start_date else "",
+        "end_date": str(req.end_date) if req.end_date else "",
+        "buy_in": req.buy_in or "", "game_type": req.game_type,
+        "is_global": str(req.is_global), "created_by": int(current_user["id"]),
+        "created_at": datetime.utcnow().isoformat()
+    }
+    sheets.insert_row("poker_tournaments", data)
+    return t_dict(data)
 
 
 @router.put("/{tournament_id}")
-def update_tournament(
-    tournament_id: int,
-    req: TournamentCreate,
-    db: DBSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+def update_tournament(tournament_id: int, req: TournamentCreate, current_user: dict = Depends(get_current_user)):
+    t = sheets.get_row("poker_tournaments", tournament_id)
     if not t:
         raise HTTPException(status_code=404, detail="Nicht gefunden")
-    if t.created_by != current_user.id and not current_user.is_admin:
+    if int(t["created_by"]) != int(current_user["id"]) and str(current_user.get("is_admin", "")).lower() != "true":
         raise HTTPException(status_code=403, detail="Keine Berechtigung")
-    if req.is_global and not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Nur Admins können Turniere global setzen")
-    for k, v in req.model_dump().items():
-        setattr(t, k, v)
-    db.commit()
-    return tournament_to_dict(t)
+    if req.is_global and str(current_user.get("is_admin", "")).lower() != "true":
+        raise HTTPException(status_code=403, detail="Nur Admins können global setzen")
+    data = {
+        "name": req.name, "series": req.series or "", "location": req.location or "",
+        "start_date": str(req.start_date) if req.start_date else "",
+        "end_date": str(req.end_date) if req.end_date else "",
+        "buy_in": req.buy_in or "", "game_type": req.game_type, "is_global": str(req.is_global)
+    }
+    sheets.update_row("poker_tournaments", tournament_id, data)
+    return t_dict({**t, **data})
 
 
 @router.delete("/{tournament_id}")
-def delete_tournament(
-    tournament_id: int,
-    db: DBSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+def delete_tournament(tournament_id: int, current_user: dict = Depends(get_current_user)):
+    t = sheets.get_row("poker_tournaments", tournament_id)
     if not t:
         raise HTTPException(status_code=404, detail="Nicht gefunden")
-    if t.created_by != current_user.id and not current_user.is_admin:
+    if int(t["created_by"]) != int(current_user["id"]) and str(current_user.get("is_admin", "")).lower() != "true":
         raise HTTPException(status_code=403, detail="Keine Berechtigung")
-    db.delete(t)
-    db.commit()
+    sheets.delete_row("poker_tournaments", tournament_id)
     return {"ok": True}
 
 
 @router.put("/{tournament_id}/entry")
-def upsert_entry(
-    tournament_id: int,
-    req: EntryUpsert,
-    db: DBSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+def upsert_entry(tournament_id: int, req: EntryUpsert, current_user: dict = Depends(get_current_user)):
+    t = sheets.get_row("poker_tournaments", tournament_id)
     if not t:
         raise HTTPException(status_code=404, detail="Turnier nicht gefunden")
+    uid = int(current_user["id"])
+    entries = sheets.all_rows("poker_entries")
+    existing = next((e for e in entries if int(e["tournament_id"]) == tournament_id and int(e["user_id"]) == uid), None)
 
-    entry = db.query(TournamentEntry).filter(
-        TournamentEntry.tournament_id == tournament_id,
-        TournamentEntry.user_id == current_user.id
-    ).first()
-
-    if entry:
-        entry.result_position = req.result_position
-        entry.prize_money = req.prize_money
-        entry.notes = req.notes
+    if existing:
+        sheets.update_row("poker_entries", int(existing["id"]), {
+            "result_position": req.result_position or "",
+            "prize_money": req.prize_money, "notes": req.notes or ""
+        })
+        return {"id": int(existing["id"]), "result_position": req.result_position, "prize_money": req.prize_money}
     else:
-        entry = TournamentEntry(
-            user_id=current_user.id,
-            tournament_id=tournament_id,
-            **req.model_dump()
-        )
-        db.add(entry)
-
-    db.commit()
-    db.refresh(entry)
-    return {"id": entry.id, "result_position": entry.result_position, "prize_money": entry.prize_money}
+        eid = sheets.next_id("poker_entries")
+        data = {
+            "id": eid, "user_id": uid, "tournament_id": tournament_id,
+            "result_position": req.result_position or "", "prize_money": req.prize_money,
+            "notes": req.notes or "", "created_at": datetime.utcnow().isoformat()
+        }
+        sheets.insert_row("poker_entries", data)
+        return {"id": eid, "result_position": req.result_position, "prize_money": req.prize_money}
 
 
 @router.delete("/{tournament_id}/entry")
-def delete_entry(
-    tournament_id: int,
-    db: DBSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    entry = db.query(TournamentEntry).filter(
-        TournamentEntry.tournament_id == tournament_id,
-        TournamentEntry.user_id == current_user.id
-    ).first()
-    if entry:
-        db.delete(entry)
-        db.commit()
+def delete_entry(tournament_id: int, current_user: dict = Depends(get_current_user)):
+    uid = int(current_user["id"])
+    entries = sheets.all_rows("poker_entries")
+    existing = next((e for e in entries if int(e["tournament_id"]) == tournament_id and int(e["user_id"]) == uid), None)
+    if existing:
+        sheets.delete_row("poker_entries", int(existing["id"]))
     return {"ok": True}

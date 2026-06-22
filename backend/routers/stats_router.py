@@ -1,32 +1,32 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session as DBSession
-from database import get_db, Session, TournamentEntry, User
-from auth import get_current_user
 from collections import defaultdict
+import sheets
+from auth import get_current_user
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
 
 @router.get("/summary")
-def get_summary(db: DBSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    sessions = db.query(Session).filter(Session.user_id == current_user.id).all()
+def get_summary(current_user: dict = Depends(get_current_user)):
+    uid = int(current_user["id"])
+    rows = sheets.all_rows("poker_sessions")
+    sessions = [r for r in rows if int(r["user_id"]) == uid]
 
     if not sessions:
-        return {
-            "total_sessions": 0, "total_profit": 0, "total_buy_in": 0,
-            "win_rate": 0, "roi": 0, "avg_profit_per_session": 0,
-            "total_hours": 0, "profit_per_hour": 0,
-            "biggest_win": 0, "biggest_loss": 0, "current_streak": 0,
-        }
+        return {"total_sessions": 0, "total_profit": 0, "total_buy_in": 0,
+                "win_rate": 0, "roi": 0, "avg_profit_per_session": 0,
+                "total_hours": 0, "profit_per_hour": 0, "biggest_win": 0,
+                "biggest_loss": 0, "current_streak": 0}
 
-    profits = [s.cash_out - s.buy_in for s in sessions]
-    total_buy_in = sum(s.buy_in for s in sessions)
+    profits = [float(s["cash_out"]) - float(s["buy_in"]) for s in sessions]
+    total_buy_in = sum(float(s["buy_in"]) for s in sessions)
     total_profit = sum(profits)
     wins = [p for p in profits if p > 0]
-    total_minutes = sum(s.duration_minutes or 0 for s in sessions)
+    total_minutes = sum(int(s["duration_minutes"]) for s in sessions if s["duration_minutes"])
     total_hours = total_minutes / 60
 
-    sorted_profits = [s.cash_out - s.buy_in for s in sorted(sessions, key=lambda x: x.date, reverse=True)]
+    sorted_profits = [float(s["cash_out"]) - float(s["buy_in"])
+                      for s in sorted(sessions, key=lambda x: x["date"], reverse=True)]
     streak = 0
     if sorted_profits:
         sign = 1 if sorted_profits[0] >= 0 else -1
@@ -52,26 +52,34 @@ def get_summary(db: DBSession = Depends(get_db), current_user: User = Depends(ge
 
 
 @router.get("/monthly")
-def get_monthly(db: DBSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    sessions = db.query(Session).filter(Session.user_id == current_user.id).all()
+def get_monthly(current_user: dict = Depends(get_current_user)):
+    uid = int(current_user["id"])
+    rows = sheets.all_rows("poker_sessions")
+    sessions = [r for r in rows if int(r["user_id"]) == uid]
     monthly = defaultdict(lambda: {"profit": 0, "sessions": 0, "buy_in": 0})
     for s in sessions:
-        key = f"{s.date.year}-{s.date.month:02d}"
-        monthly[key]["profit"] += round(s.cash_out - s.buy_in, 2)
+        key = s["date"][:7]  # YYYY-MM
+        p = float(s["cash_out"]) - float(s["buy_in"])
+        monthly[key]["profit"] += round(p, 2)
         monthly[key]["sessions"] += 1
-        monthly[key]["buy_in"] += s.buy_in
+        monthly[key]["buy_in"] += float(s["buy_in"])
     return [{"month": k, **v} for k, v in sorted(monthly.items())]
 
 
 @router.get("/tournaments")
-def get_tournament_stats(db: DBSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    entries = db.query(TournamentEntry).filter(TournamentEntry.user_id == current_user.id).all()
-    if not entries:
-        return {"total_entered": 0, "total_invested": 0, "total_winnings": 0, "tournament_profit": 0, "itm_rate": 0}
+def get_tournament_stats(current_user: dict = Depends(get_current_user)):
+    uid = int(current_user["id"])
+    entries = [e for e in sheets.all_rows("poker_entries") if int(e["user_id"]) == uid]
+    tournaments = {int(t["id"]): t for t in sheets.all_rows("poker_tournaments")}
 
-    total_invested = sum(e.tournament.buy_in or 0 for e in entries if e.tournament)
-    total_winnings = sum(e.prize_money or 0 for e in entries)
-    itm = len([e for e in entries if (e.prize_money or 0) > 0])
+    if not entries:
+        return {"total_entered": 0, "total_invested": 0, "total_winnings": 0,
+                "tournament_profit": 0, "itm_rate": 0}
+
+    total_invested = sum(float(tournaments[int(e["tournament_id"])]["buy_in"] or 0)
+                         for e in entries if int(e["tournament_id"]) in tournaments)
+    total_winnings = sum(float(e["prize_money"] or 0) for e in entries)
+    itm = len([e for e in entries if float(e["prize_money"] or 0) > 0])
 
     return {
         "total_entered": len(entries),
