@@ -41,9 +41,20 @@ def get_sheet(name: str):
     return ws
 
 
+def _ensure_columns(ws, schema: list[str]):
+    """Fehlende Spalten im Sheet ergänzen."""
+    actual = ws.row_values(1)
+    missing = [col for col in schema if col not in actual]
+    if missing:
+        for col in missing:
+            ws.add_cols(1)
+            ws.update_cell(1, len(actual) + missing.index(col) + 1, col)
+
+
 def init_sheets():
-    for name in SHEET_SCHEMAS:
-        get_sheet(name)
+    for name, schema in SHEET_SCHEMAS.items():
+        ws = get_sheet(name)
+        _ensure_columns(ws, schema)
 
 
 def all_rows(sheet_name: str) -> list[dict]:
@@ -67,7 +78,8 @@ def next_id(sheet_name: str) -> int:
 
 def insert_row(sheet_name: str, data: dict) -> dict:
     ws = get_sheet(sheet_name)
-    headers = SHEET_SCHEMAS[sheet_name]
+    # Echte Header aus dem Sheet verwenden
+    headers = ws.row_values(1)
     row = [str(data.get(h, "")) for h in headers]
     ws.append_row(row)
     return data
@@ -75,8 +87,9 @@ def insert_row(sheet_name: str, data: dict) -> dict:
 
 def update_row(sheet_name: str, row_id: int, data: dict):
     ws = get_sheet(sheet_name)
+    # Echte Header aus dem Sheet verwenden
+    headers = ws.row_values(1)
     records = ws.get_all_records()
-    headers = SHEET_SCHEMAS[sheet_name]
     for i, r in enumerate(records):
         if int(r["id"]) == row_id:
             sheet_row = i + 2
