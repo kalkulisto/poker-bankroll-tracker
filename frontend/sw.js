@@ -1,8 +1,7 @@
-const CACHE = 'cz-poker-v1';
-const ASSETS = ['/'];
+const CACHE = 'cz-poker-v2';
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  e.waitUntil(caches.open(CACHE).then(c => c.add('/')));
   self.skipWaiting();
 });
 
@@ -14,11 +13,7 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  if (e.request.url.includes('/auth/') || e.request.url.includes('/sessions') ||
-      e.request.url.includes('/tournaments') || e.request.url.includes('/stats')) {
-    return;
-  }
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    caches.match(e.request).then(response => response || fetch(e.request))
   );
 });
