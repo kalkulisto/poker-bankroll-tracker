@@ -26,6 +26,8 @@ app.include_router(sessions_router)
 app.include_router(tournaments_router)
 app.include_router(stats_router)
 
+frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
+
 
 @app.on_event("startup")
 def startup():
@@ -49,13 +51,29 @@ def _create_default_admin():
         })
         print(f"Admin '{admin_name}' angelegt")
     else:
-        # Setzt pin_changed=True fuer den Admin falls noch nicht gesetzt
         if str(existing.get("pin_changed", "")).lower() != "true":
             update_row("poker_users", int(existing["id"]), {"pin_changed": "True"})
-            print(f"Admin '{admin_name}' pin_changed gesetzt")
 
 
-frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
+# PWA-Dateien direkt an der Wurzel servieren (wichtig fuer Service Worker Scope)
+@app.get("/sw.js")
+def serve_sw():
+    return FileResponse(os.path.join(frontend_path, "sw.js"), media_type="application/javascript")
+
+@app.get("/manifest.json")
+def serve_manifest():
+    return FileResponse(os.path.join(frontend_path, "manifest.json"), media_type="application/manifest+json")
+
+@app.get("/icon-192.png")
+def serve_icon_192():
+    return FileResponse(os.path.join(frontend_path, "icon-192.png"), media_type="image/png")
+
+@app.get("/icon-512.png")
+def serve_icon_512():
+    return FileResponse(os.path.join(frontend_path, "icon-512.png"), media_type="image/png")
+
+
+# Statische Dateien
 if os.path.exists(frontend_path):
     app.mount("/static", StaticFiles(directory=frontend_path), name="static")
 

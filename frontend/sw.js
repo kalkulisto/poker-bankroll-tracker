@@ -1,5 +1,5 @@
 const CACHE = 'cz-poker-v1';
-const ASSETS = ['/', '/static/manifest.json'];
+const ASSETS = ['/'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
@@ -14,7 +14,6 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // API-Calls immer live holen
   if (e.request.url.includes('/auth/') || e.request.url.includes('/sessions') ||
       e.request.url.includes('/tournaments') || e.request.url.includes('/stats')) {
     return;
