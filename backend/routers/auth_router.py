@@ -18,10 +18,19 @@ class CreateUserRequest(BaseModel):
     is_admin: bool = False
 
 
+def user_dict(u: dict) -> dict:
+    return {
+        "id": int(u["id"]),
+        "name": u["name"],
+        "is_admin": str(u.get("is_admin", "")).lower() == "true",
+        "pin_changed": str(u.get("pin_changed", "")).lower() == "true",
+    }
+
+
 @router.get("/users")
 def list_users():
-    users = sheets.all_rows("poker_users")
-    return [{"id": int(u["id"]), "name": u["name"], "is_admin": str(u["is_admin"]).lower() == "true"} for u in users]
+    return [{"id": int(u["id"]), "name": u["name"], "is_admin": str(u["is_admin"]).lower() == "true"}
+            for u in sheets.all_rows("poker_users")]
 
 
 @router.post("/login")
@@ -30,16 +39,12 @@ def login(req: LoginRequest):
     user = next((u for u in users if u["name"] == req.name), None)
     if not user or user["pin_hash"] != hash_pin(req.pin):
         raise HTTPException(status_code=401, detail="Falscher Name oder PIN")
-    uid = int(user["id"])
-    return {
-        "token": create_token(uid),
-        "user": {"id": uid, "name": user["name"], "is_admin": str(user["is_admin"]).lower() == "true"}
-    }
+    return {"token": create_token(int(user["id"])), "user": user_dict(user)}
 
 
 @router.get("/me")
 def me(current_user: dict = Depends(get_current_user)):
-    return {"id": int(current_user["id"]), "name": current_user["name"], "is_admin": str(current_user["is_admin"]).lower() == "true"}
+    return user_dict(current_user)
 
 
 @router.post("/users")
@@ -50,7 +55,8 @@ def create_user(req: CreateUserRequest, admin: dict = Depends(require_admin)):
     uid = sheets.next_id("poker_users")
     data = {
         "id": uid, "name": req.name, "pin_hash": hash_pin(req.pin),
-        "is_admin": str(req.is_admin), "created_at": datetime.utcnow().isoformat()
+        "is_admin": str(req.is_admin), "pin_changed": "False",
+        "created_at": datetime.utcnow().isoformat()
     }
     sheets.insert_row("poker_users", data)
     return {"id": uid, "name": req.name, "is_admin": req.is_admin}
@@ -60,5 +66,8 @@ def create_user(req: CreateUserRequest, admin: dict = Depends(require_admin)):
 def change_pin(user_id: int, body: dict, current_user: dict = Depends(get_current_user)):
     if int(current_user["id"]) != user_id and str(current_user.get("is_admin", "")).lower() != "true":
         raise HTTPException(status_code=403, detail="Keine Berechtigung")
-    sheets.update_row("poker_users", user_id, {"pin_hash": hash_pin(body["new_pin"])})
+    sheets.update_row("poker_users", user_id, {
+        "pin_hash": hash_pin(body["new_pin"]),
+        "pin_changed": "True"
+    })
     return {"ok": True}

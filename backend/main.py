@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from sheets import init_sheets, all_rows, next_id, insert_row
+from sheets import init_sheets, all_rows, next_id, insert_row, update_row
 from auth import hash_pin
 from routers.auth_router import router as auth_router
 from routers.sessions_router import router as sessions_router
@@ -29,23 +29,30 @@ app.include_router(stats_router)
 
 @app.on_event("startup")
 def startup():
-    print("🃏 Initialisiere Sheets...")
+    print("Initialisiere Sheets...")
     init_sheets()
     _create_default_admin()
-    print("✅ Fertig")
+    print("Fertig")
 
 
 def _create_default_admin():
     admin_name = os.getenv("ADMIN_NAME", "Andreas")
     admin_pin = os.getenv("ADMIN_PIN", "1234")
     users = all_rows("poker_users")
-    if not any(u["name"] == admin_name for u in users):
+    existing = next((u for u in users if u["name"] == admin_name), None)
+    if not existing:
         uid = next_id("poker_users")
         insert_row("poker_users", {
             "id": uid, "name": admin_name, "pin_hash": hash_pin(admin_pin),
-            "is_admin": "True", "created_at": datetime.utcnow().isoformat()
+            "is_admin": "True", "pin_changed": "True",
+            "created_at": datetime.utcnow().isoformat()
         })
-        print(f"✅ Admin '{admin_name}' angelegt")
+        print(f"Admin '{admin_name}' angelegt")
+    else:
+        # Setzt pin_changed=True fuer den Admin falls noch nicht gesetzt
+        if str(existing.get("pin_changed", "")).lower() != "true":
+            update_row("poker_users", int(existing["id"]), {"pin_changed": "True"})
+            print(f"Admin '{admin_name}' pin_changed gesetzt")
 
 
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")

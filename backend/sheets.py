@@ -11,7 +11,7 @@ SCOPES = [
 ]
 
 SHEET_SCHEMAS = {
-    "poker_users":       ["id", "name", "pin_hash", "is_admin", "created_at"],
+    "poker_users":       ["id", "name", "pin_hash", "is_admin", "pin_changed", "created_at"],
     "poker_sessions":    ["id", "user_id", "date", "location", "game_type", "stakes", "buy_in", "cash_out", "duration_minutes", "notes", "created_at"],
     "poker_tournaments": ["id", "name", "series", "location", "start_date", "end_date", "buy_in", "game_type", "is_global", "created_by", "created_at"],
     "poker_entries":     ["id", "user_id", "tournament_id", "result_position", "prize_money", "notes", "created_at"],
@@ -32,7 +32,6 @@ def get_spreadsheet():
 
 
 def get_sheet(name: str):
-    """Holt ein Sheet, legt es an falls nicht vorhanden."""
     ss = get_spreadsheet()
     try:
         ws = ss.worksheet(name)
@@ -43,22 +42,17 @@ def get_sheet(name: str):
 
 
 def init_sheets():
-    """Legt alle benötigten Sheets beim Start an."""
     for name in SHEET_SCHEMAS:
         get_sheet(name)
 
 
-# ── CRUD Hilfsfunktionen ───────────────────────────────────────────────────────
-
 def all_rows(sheet_name: str) -> list[dict]:
     ws = get_sheet(sheet_name)
-    records = ws.get_all_records()
-    return records
+    return ws.get_all_records()
 
 
 def get_row(sheet_name: str, row_id: int) -> dict | None:
-    rows = all_rows(sheet_name)
-    for r in rows:
+    for r in all_rows(sheet_name):
         if int(r["id"]) == row_id:
             return r
     return None
@@ -85,7 +79,7 @@ def update_row(sheet_name: str, row_id: int, data: dict):
     headers = SHEET_SCHEMAS[sheet_name]
     for i, r in enumerate(records):
         if int(r["id"]) == row_id:
-            sheet_row = i + 2  # +1 header, +1 1-indexed
+            sheet_row = i + 2
             for col_idx, header in enumerate(headers, start=1):
                 if header in data:
                     ws.update_cell(sheet_row, col_idx, str(data[header]))
