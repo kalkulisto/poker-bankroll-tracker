@@ -144,12 +144,18 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
 .shared-player-prize{font-size:.85rem;color:var(--green-hi);margin-top:.1rem;}
 .winner-badge{font-size:.65rem;background:#2a1f00;color:var(--gold);padding:.15rem .5rem;border-radius:4px;font-weight:700;margin-left:.4rem;}
 @media(max-width:640px){
-  header{padding:0 1rem;gap:.5rem;}
-  .nav-btn{padding:.4rem .5rem;font-size:.75rem;}
+  header{padding:.5rem 1rem;flex-direction:column;height:auto;gap:.4rem;}
+  .header-top{display:flex;justify-content:space-between;align-items:center;width:100%;}
+  nav{width:100%;display:grid;grid-template-columns:repeat(5,1fr);gap:.2rem;}
+  .nav-btn{padding:.4rem .1rem;font-size:.7rem;text-align:center;border-radius:6px;}
+  main{padding:1rem .75rem;}
   .tournament-item{grid-template-columns:1fr;}
   .lb-header,.lb-row{grid-template-columns:2rem 1fr repeat(3,5rem);}
   .lb-header>*:nth-child(5),.lb-row>*:nth-child(5),
   .lb-header>*:nth-child(6),.lb-row>*:nth-child(6){display:none;}
+}
+@media(min-width:641px){
+  .header-top{display:contents;}
 }
 </style>
 </head>
@@ -177,7 +183,13 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
 
 <div id="app">
   <header>
-    <span class="header-logo">&#9824; Chico &amp; Zwieback</span>
+    <div class="header-top">
+      <span class="header-logo">&#9824; Chico &amp; Zwieback</span>
+      <div class="header-user">
+        <strong id="header-username"></strong>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
     <nav>
       <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
       <button class="nav-btn" onclick="showPage('sessions')">Sessions</button>
@@ -185,10 +197,6 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
       <button class="nav-btn" onclick="showPage('rangliste')">Rangliste</button>
       <button class="nav-btn" onclick="showPage('stats')">Statistiken</button>
     </nav>
-    <div class="header-user">
-      <strong id="header-username"></strong>
-      <button class="logout-btn" onclick="logout()">Logout</button>
-    </div>
   </header>
   <main>
 
