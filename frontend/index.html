@@ -164,6 +164,13 @@
     .lb-header > *:nth-child(6), .lb-row > *:nth-child(6) { display: none; }
   }
 </style>
+<link rel="manifest" href="/static/manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="C&amp;Z Poker">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<meta name="theme-color" content="#0a0f0a">
 </head>
 <body>
 
@@ -751,5 +758,6 @@ if(token&&currentUser){enterApp();}else{document.getElementById('login-screen').
 window.addEventListener('resize',()=>{if(allSessions.length)renderDashboard();});
 setTFilter('upcoming');
 </script>
+<script>if("serviceWorker"in navigator){navigator.serviceWorker.register("/static/sw.js");}</script>
 </body>
 </html>
