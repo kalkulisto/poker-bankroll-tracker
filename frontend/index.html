@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poker Bankroll Tracker</title>
+<style>
+  :root {
+    --bg:       #0a0f0a;
+    --surface:  #111811;
+    --card:     #162016;
+    --border:   #1e2e1e;
+    --felt:     #1a4a2a;
+    --green:    #2d8f4e;
+    --green-hi: #3db866;
+    --gold:     #c9a84c;
+    --gold-dim: #8a6f30;
+    --red:      #c0392b;
+    --red-dim:  #7d2820;
+    --text:     #e8e8e4;
+    --muted:    #7a8a7a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 2rem; background: radial-gradient(ellipse at center, #0d1f10 0%, #0a0f0a 70%); }
+  .logo { text-align: center; }
+  .logo-suits { font-size: 2.8rem; letter-spacing: 0.4rem; opacity: 0.85; }
+  .logo-title { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.15rem; color: var(--gold); text-transform: uppercase; margin-top: 0.5rem; }
+  .logo-sub { font-size: 0.75rem; color: var(--muted); letter-spacing: 0.2rem; text-transform: uppercase; margin-top: 0.25rem; }
+  .user-cards { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+  .user-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem 2rem; cursor: pointer; transition: border-color 0.2s, transform 0.15s; text-align: center; min-width: 120px; }
+  .user-card:hover { border-color: var(--green); transform: translateY(-2px); }
+  .user-card.selected { border-color: var(--gold); background: #1a2010; }
+  .user-card-avatar { font-size: 2rem; margin-bottom: 0.5rem; }
+  .user-card-name { font-weight: 600; font-size: 1rem; }
+  .user-card-admin { font-size: 0.65rem; color: var(--gold); text-transform: uppercase; margin-top: 0.2rem; }
+  .pin-section { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; animation: fadeIn 0.2s; }
+  .pin-dots { display: flex; gap: 0.75rem; margin-bottom: 0.25rem; }
+  .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border); background: transparent; transition: background 0.1s, border-color 0.1s; }
+  .pin-dot.filled { background: var(--gold); border-color: var(--gold); }
+  .pin-grid { display: grid; grid-template-columns: repeat(3, 56px); gap: 0.5rem; }
+  .pin-btn { height: 56px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 1.2rem; font-weight: 600; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .pin-btn:hover { background: var(--felt); border-color: var(--green); }
+  .pin-btn.del { color: var(--muted); font-size: 1rem; }
+  .error-msg { color: var(--red); font-size: 0.85rem; min-height: 1.2rem; text-align: center; }
+  #app { display: none; min-height: 100vh; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 1.5rem; display: flex; align-items: center; gap: 1rem; height: 56px; position: sticky; top: 0; z-index: 100; }
+  .header-logo { font-weight: 700; color: var(--gold); font-size: 1rem; letter-spacing: 0.05rem; }
+  nav { display: flex; gap: 0.25rem; flex: 1; }
+  .nav-btn { background: none; border: none; color: var(--muted); padding: 0.4rem 0.85rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: color 0.15s, background 0.15s; white-space: nowrap; }
+  .nav-btn:hover { color: var(--text); background: var(--card); }
+  .nav-btn.active { color: var(--green-hi); background: var(--card); }
+  .header-user { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--muted); }
+  .header-user strong { color: var(--text); }
+  .logout-btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 0.3rem 0.7rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; transition: color 0.15s, border-color 0.15s; }
+  .logout-btn:hover { color: var(--red); border-color: var(--red); }
+  main { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+  .panel-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.15rem; color: var(--muted); margin-bottom: 1rem; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
+  .stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1rem; margin-bottom: 0.35rem; }
+  .stat-value { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat-value.pos { color: var(--green-hi); }
+  .stat-value.neg { color: var(--red); }
+  .stat-value.neutral { color: var(--text); }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .data-table th { text-align: left; padding: 0.5rem 0.75rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1rem; color: var(--muted); border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 0.75rem 0.75rem; border-bottom: 1px solid #1a2a1a; vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: #141f14; }
+  .profit-pos { color: var(--green-hi); font-weight: 600; }
+  .profit-neg { color: var(--red); font-weight: 600; }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; }
+  .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08rem; }
+  .form-input, .form-select, .form-textarea { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0.6rem 0.85rem; font-size: 0.9rem; font-family: inherit; transition: border-color 0.15s; width: 100%; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--green); }
+  .form-select option { background: var(--surface); }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .btn { padding: 0.6rem 1.25rem; border-radius: 8px; border: none; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s, transform 0.1s; font-family: inherit; }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--green); color: #fff; }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-gold { background: var(--gold); color: #0a0f0a; }
+  .btn-gold:hover { opacity: 0.85; }
+  .btn-ghost { background: none; border: 1px solid var(--border); color: var(--muted); }
+  .btn-ghost:hover { border-color: var(--green); color: var(--text); }
+  .btn-danger { background: none; border: 1px solid var(--border); color: var(--red); }
+  .btn-danger:hover { background: var(--red-dim); border-color: var(--red); }
+  .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.8rem; }
+  .action-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
+  .action-row-right { display: flex; gap: 0.5rem; }
+  .tournament-list { display: flex; flex-direction: column; gap: 0.75rem; }
+  .tournament-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: center; }
+  .tournament-item.global { border-left: 3px solid var(--gold); }
+  .tournament-item.personal { border-left: 3px solid var(--green); }
+  .t-date { text-align: center; min-width: 52px; }
+  .t-date-day { font-size: 1.4rem; font-weight: 700; color: var(--gold); line-height: 1; }
+  .t-date-month { font-size: 0.7rem; text-transform: uppercase; color: var(--muted); letter-spacing: 0.1rem; }
+  .t-name { font-weight: 600; font-size: 0.95rem; }
+  .t-meta { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+  .t-series { color: var(--gold-dim); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08rem; }
+  .t-buyin { color: var(--green-hi); font-weight: 600; }
+  .t-badge { font-size: 0.65rem; padding: 0.15rem 0.5rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.08rem; font-weight: 700; }
+  .t-badge.global-badge { background: #2a1f00; color: var(--gold); }
+  .t-badge.own-badge { background: #0d2010; color: var(--green-hi); }
+  .t-actions { display: flex; flex-direction: column; gap: 0.4rem; align-items: flex-end; }
+  .entry-result { font-size: 0.75rem; color: var(--muted); text-align: right; }
+  .entry-result.won { color: var(--green-hi); }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
+  .modal-title { font-size: 1rem; font-weight: 700; color: var(--gold); margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; }
+  .modal-close { background: none; border: none; color: var(--muted); font-size: 1.3rem; cursor: pointer; line-height: 1; }
+  .modal-close:hover { color: var(--text); }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; }
+  .bankroll-chart { width: 100%; height: 120px; margin-top: 0.75rem; }
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+  .empty-state-icon { font-size: 2.5rem; margin-bottom: 0.5rem; opacity: 0.5; }
+  .empty-state p { font-size: 0.9rem; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .checkbox-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0; }
+  .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--gold); cursor: pointer; }
+  .checkbox-row label { font-size: 0.875rem; cursor: pointer; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .page.active { animation: fadeIn 0.2s; }
+  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+  .section-title { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
+  .filter-row { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+  .filter-row .form-input { max-width: 180px; }
+  @media (max-width: 640px) {
+    header { padding: 0 1rem; gap: 0.5rem; }
+    .nav-btn { padding: 0.4rem 0.5rem; font-size: 0.78rem; }
+    .tournament-item { grid-template-columns: 1fr; }
+    .t-date { display: flex; gap: 0.5rem; align-items: baseline; }
+    .t-date-day { font-size: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="logo">
+    <div class="logo-suits">♠ ♥ ♦ ♣</div>
+    <div class="logo-title">Bankroll Tracker</div>
+    <div class="logo-sub">Las Vegas Series</div>
+  </div>
+  <div>
+    <div style="font-size:0.75rem;color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:0.15rem;margin-bottom:0.75rem;">Wer spielt?</div>
+    <div class="user-cards" id="user-list"></div>
+  </div>
+  <div class="pin-section" id="pin-section" style="display:none">
+    <div class="pin-dots">
+      <div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div>
+    </div>
+    <div class="pin-grid" id="pin-grid"></div>
+    <div class="error-msg" id="pin-error"></div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <span class="header-logo">♠ BR Tracker</span>
+    <nav>
+      <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
+      <button class="nav-btn" onclick="showPage('sessions')">Sessions</button>
+      <button class="nav-btn" onclick="showPage('tournaments')">Turniere</button>
+      <button class="nav-btn" onclick="showPage('stats')">Statistiken</button>
+    </nav>
+    <div class="header-user">
+      <strong id="header-username"></strong>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </header>
+  <main>
+    <div class="page active" id="page-dashboard">
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-label">Gesamtprofit</div><div class="stat-value neutral" id="s-total-profit">—</div></div>
+        <div class="stat-card"><div class="stat-label">Sessions</div><div class="stat-value neutral" id="s-sessions">—</div></div>
+        <div class="stat-card"><div class="stat-label">Win Rate</div><div class="stat-value neutral" id="s-winrate">—</div></div>
+        <div class="stat-card"><div class="stat-label">ROI</div><div class="stat-value neutral" id="s-roi">—</div></div>
+        <div class="stat-card"><div class="stat-label">Ø / Session</div><div class="stat-value neutral" id="s-avg">—</div></div>
+        <div class="stat-card"><div class="stat-label">Ø / Stunde</div><div class="stat-value neutral" id="s-hr">—</div></div>
+        <div class="stat-card"><div class="stat-label">Größter Win</div><div class="stat-value neutral" id="s-bigwin">—</div></div>
+        <div class="stat-card"><div class="stat-label">Größter Loss</div><div class="stat-value neutral" id="s-bigloss">—</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Bankroll-Verlauf</div>
+        <canvas class="bankroll-chart" id="bankroll-chart"></canvas>
+      </div>
+      <div class="panel">
+        <div class="section-header">
+          <div class="section-title">Letzte Sessions</div>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('sessions')">Alle →</button>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Datum</th><th>Ort</th><th>Spiel</th><th>Buy-in</th><th>Cash-out</th><th>Profit</th></tr></thead>
+          <tbody id="recent-sessions"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="page" id="page-sessions">
+      <div class="action-row">
+        <div class="section-title">Cash Game Sessions</div>
+        <div class="action-row-right"><button class="btn btn-primary" onclick="openSessionModal()">+ Session</button></div>
+      </div>
+      <div class="panel" style="padding:0.5rem">
+        <div class="filter-row" style="padding:0.75rem 0.75rem 0">
+          <input class="form-input" id="session-filter-loc" placeholder="Ort filtern..." oninput="renderSessions()">
+          <select class="form-select" id="session-filter-game" style="max-width:180px" onchange="renderSessions()">
+            <option value="">Alle Spiele</option>
+            <option>NL Hold'em</option><option>PLO</option><option>7-Card Stud</option><option>Mixed</option>
+          </select>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Datum</th><th>Ort</th><th>Spiel</th><th>Stakes</th><th>Buy-in</th><th>Cash-out</th><th>Profit</th><th>Dauer</th><th></th></tr></thead>
+          <tbody id="session-table"></tbody>
+        </table>
+        <div id="sessions-empty" class="empty-state" style="display:none"><div class="empty-state-icon">🃏</div><p>Noch keine Sessions.</p></div>
+      </div>
+    </div>
+
+    <div class="page" id="page-tournaments">
+      <div class="action-row">
+        <div class="section-title">Turnierkalender</div>
+        <div class="action-row-right"><button class="btn btn-primary" onclick="openTournamentModal()">+ Turnier</button></div>
+      </div>
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" id="tf-all" onclick="setTFilter('all')">Alle</button>
+        <button class="btn btn-ghost btn-sm" id="tf-upcoming" onclick="setTFilter('upcoming')">Bevorstehend</button>
+        <button class="btn btn-ghost btn-sm" id="tf-entered" onclick="setTFilter('entered')">Angemeldet</button>
+      </div>
+      <div class="tournament-list" id="tournament-list"></div>
+      <div id="tournaments-empty" class="empty-state" style="display:none"><div class="empty-state-icon">🏆</div><p>Keine Turniere.</p></div>
+    </div>
+
+    <div class="page" id="page-stats">
+      <div class="panel">
+        <div class="panel-title">Monatliche Entwicklung</div>
+        <canvas id="monthly-chart" height="160"></canvas>
+      </div>
+      <div class="stat-grid" style="margin-bottom:0">
+        <div class="stat-card"><div class="stat-label">Turniere gespielt</div><div class="stat-value neutral" id="ts-entered">—</div></div>
+        <div class="stat-card"><div class="stat-label">Invested</div><div class="stat-value neutral" id="ts-invested">—</div></div>
+        <div class="stat-card"><div class="stat-label">Gewonnen</div><div class="stat-value neutral" id="ts-winnings">—</div></div>
+        <div class="stat-card"><div class="stat-label">Turnier Profit</div><div class="stat-value neutral" id="ts-profit">—</div></div>
+        <div class="stat-card"><div class="stat-label">ITM Rate</div><div class="stat-value neutral" id="ts-itm">—</div></div>
+      </div>
+      <div id="admin-section" style="display:none;margin-top:1rem">
+        <div class="panel">
+          <div class="panel-title">Admin: Neuen Nutzer anlegen</div>
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="new-user-name" placeholder="Spielername"></div>
+            <div class="form-group"><label class="form-label">PIN (4-stellig)</label><input class="form-input" id="new-user-pin" type="password" maxlength="4" placeholder="••••"></div>
+          </div>
+          <div class="checkbox-row" style="margin-top:0.5rem"><input type="checkbox" id="new-user-admin"><label for="new-user-admin">Admin-Rechte</label></div>
+          <div style="margin-top:0.75rem"><button class="btn btn-gold" onclick="createUser()">Nutzer anlegen</button></div>
+          <div id="create-user-msg" style="font-size:0.85rem;margin-top:0.5rem;color:var(--muted)"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="session-modal">
+  <div class="modal">
+    <div class="modal-title"><span id="session-modal-title">Session erfassen</span><button class="modal-close" onclick="closeModal('session-modal')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Datum</label><input class="form-input" type="date" id="s-date"></div>
+      <div class="form-group"><label class="form-label">Ort / Casino</label><input class="form-input" id="s-location" placeholder="z.B. Bellagio, WSOP"></div>
+      <div class="form-group"><label class="form-label">Spieltyp</label><select class="form-select" id="s-game"><option>NL Hold'em</option><option>PLO</option><option>7-Card Stud</option><option>Mixed</option><option>Other</option></select></div>
+      <div class="form-group"><label class="form-label">Stakes</label><input class="form-input" id="s-stakes" placeholder="z.B. 1/2, 2/5, 5/10"></div>
+      <div class="form-group"><label class="form-label">Buy-in ($)</label><input class="form-input" type="number" id="s-buyin" min="0" step="1"></div>
+      <div class="form-group"><label class="form-label">Cash-out ($)</label><input class="form-input" type="number" id="s-cashout" min="0" step="1"></div>
+      <div class="form-group"><label class="form-label">Dauer (Minuten)</label><input class="form-input" type="number" id="s-duration" min="0" step="15" placeholder="Optional"></div>
+      <div class="form-group full"><label class="form-label">Notizen</label><textarea class="form-textarea" id="s-notes" placeholder="Optional: Besonderheiten, Reads, Hands..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('session-modal')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveSession()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="tournament-modal">
+  <div class="modal">
+    <div class="modal-title"><span id="tournament-modal-title">Turnier hinzufügen</span><button class="modal-close" onclick="closeModal('tournament-modal')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group full"><label class="form-label">Turniername</label><input class="form-input" id="t-name" placeholder="z.B. Main Event, Monster Stack"></div>
+      <div class="form-group"><label class="form-label">Serie</label><input class="form-input" id="t-series" placeholder="z.B. WSOP, Venetian, Wynn"></div>
+      <div class="form-group"><label class="form-label">Location</label><input class="form-input" id="t-location" placeholder="z.B. Horseshoe LV"></div>
+      <div class="form-group"><label class="form-label">Startdatum</label><input class="form-input" type="date" id="t-start"></div>
+      <div class="form-group"><label class="form-label">Enddatum</label><input class="form-input" type="date" id="t-end"></div>
+      <div class="form-group"><label class="form-label">Buy-in ($)</label><input class="form-input" type="number" id="t-buyin" min="0" step="10"></div>
+      <div class="form-group"><label class="form-label">Spieltyp</label><select class="form-select" id="t-game"><option>NL Hold'em</option><option>PLO</option><option>7-Card Stud</option><option>Mixed</option><option>Other</option></select></div>
+      <div class="form-group full" id="global-toggle" style="display:none">
+        <div class="checkbox-row"><input type="checkbox" id="t-global"><label for="t-global">Für alle sichtbar (global)</label></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('tournament-modal')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveTournament()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="entry-modal">
+  <div class="modal">
+    <div class="modal-title"><span id="entry-modal-title">Ergebnis eintragen</span><button class="modal-close" onclick="closeModal('entry-modal')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Platzierung</label><input class="form-input" type="number" id="e-position" min="1" placeholder="z.B. 47"></div>
+      <div class="form-group"><label class="form-label">Preisgeld ($)</label><input class="form-input" type="number" id="e-prize" min="0" step="1" value="0"></div>
+      <div class="form-group full"><label class="form-label">Notizen</label><textarea class="form-textarea" id="e-notes" placeholder="z.B. Day 2 erreicht, busted KK vs AA..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('entry-modal')">Abbrechen</button>
+      <button class="btn btn-danger btn-sm" id="entry-remove-btn" onclick="removeEntry()" style="margin-right:auto;display:none">Abmelden</button>
+      <button class="btn btn-primary" onclick="saveEntry()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let token = localStorage.getItem('poker_token');
+let currentUser = JSON.parse(localStorage.getItem('poker_user') || 'null');
+let allSessions = [], allTournaments = [];
+let editingSessionId = null, editingTournamentId = null, entryTournamentId = null;
+let tournamentFilter = 'upcoming';
+
+async function fetchUsers() {
+  const res = await fetch(`${API}/auth/users`);
+  const users = await res.json();
+  const avatars = ['♠','♥','♦','♣','★','◆'];
+  document.getElementById('user-list').innerHTML = users.map((u,i) =>
+    `<div class="user-card" onclick="selectUser(${u.id},'${u.name}',${u.is_admin})" data-uid="${u.id}">
+      <div class="user-card-avatar">${avatars[i%avatars.length]}</div>
+      <div class="user-card-name">${u.name}</div>
+      ${u.is_admin?'<div class="user-card-admin">Admin</div>':''}
+    </div>`).join('');
+}
+
+let selectedUserName='', selectedUserId=null;
+function selectUser(id,name,isAdmin) {
+  selectedUserId=id; selectedUserName=name;
+  document.querySelectorAll('.user-card').forEach(c=>c.classList.remove('selected'));
+  document.querySelector(`[data-uid="${id}"]`).classList.add('selected');
+  document.getElementById('pin-section').style.display='flex';
+  document.getElementById('pin-error').textContent='';
+  pinValue=''; updateDots(); buildPinGrid();
+}
+
+let pinValue='';
+function buildPinGrid() {
+  const keys=['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  document.getElementById('pin-grid').innerHTML=keys.map(k=>{
+    if(k==='') return '<div></div>';
+    if(k==='⌫') return `<button class="pin-btn del" onclick="pinDel()">⌫</button>`;
+    return `<button class="pin-btn" onclick="pinPress('${k}')">${k}</button>`;
+  }).join('');
+}
+function updateDots() { for(let i=0;i<4;i++) document.getElementById(`d${i}`).classList.toggle('filled',i<pinValue.length); }
+function pinPress(k) { if(pinValue.length>=4)return; pinValue+=k; updateDots(); if(pinValue.length===4)doLogin(); }
+function pinDel() { pinValue=pinValue.slice(0,-1); updateDots(); }
+
+async function doLogin() {
+  const res=await fetch(`${API}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:selectedUserName,pin:pinValue})});
+  if(!res.ok){document.getElementById('pin-error').textContent='Falscher PIN';pinValue='';updateDots();return;}
+  const data=await res.json();
+  token=data.token; currentUser=data.user;
+  localStorage.setItem('poker_token',token);
+  localStorage.setItem('poker_user',JSON.stringify(currentUser));
+  enterApp();
+}
+
+function enterApp() {
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('header-username').textContent=currentUser.name;
+  if(currentUser.is_admin) document.getElementById('admin-section').style.display='block';
+  loadAll();
+}
+
+function logout() {
+  token=null; currentUser=null;
+  localStorage.removeItem('poker_token'); localStorage.removeItem('poker_user');
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  pinValue=''; selectedUserId=null;
+  document.querySelectorAll('.user-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('pin-section').style.display='none';
+  fetchUsers();
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  event.target.classList.add('active');
+  if(name==='stats') loadStats();
+}
+
+async function api(path,method='GET',body=null) {
+  const opts={method,headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`}};
+  if(body) opts.body=JSON.stringify(body);
+  const res=await fetch(`${API}${path}`,opts);
+  if(!res.ok) throw await res.json();
+  return res.json();
+}
+
+async function loadAll() { await Promise.all([loadSessions(),loadTournaments()]); renderDashboard(); }
+async function loadSessions() { allSessions=await api('/sessions/'); renderSessions(); renderRecentSessions(); }
+async function loadTournaments() { allTournaments=await api('/tournaments/'); renderTournaments(); }
+
+function fmtMoney(v){const n=parseFloat(v);if(isNaN(n))return'—';return(n>=0?'+':'')+'$'+Math.abs(n).toFixed(0);}
+function fmtDate(s){return new Date(s).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'});}
+function fmtDur(m){if(!m)return'—';const h=Math.floor(m/60),min=m%60;return h?`${h}h ${min}m`:`${min}m`;}
+
+function renderSessions() {
+  const fl=(document.getElementById('session-filter-loc')?.value||'').toLowerCase();
+  const fg=document.getElementById('session-filter-game')?.value||'';
+  let data=allSessions.filter(s=>(!fl||(s.location||'').toLowerCase().includes(fl))&&(!fg||s.game_type===fg));
+  const tbody=document.getElementById('session-table');
+  const empty=document.getElementById('sessions-empty');
+  if(!data.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=data.map(s=>{
+    const p=s.profit,cls=p>0?'profit-pos':p<0?'profit-neg':'';
+    return`<tr><td>${fmtDate(s.date)}</td><td>${s.location||'—'}</td><td>${s.game_type}</td><td>${s.stakes||'—'}</td><td>$${s.buy_in}</td><td>$${s.cash_out}</td><td class="${cls}">${fmtMoney(p)}</td><td>${fmtDur(s.duration_minutes)}</td><td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="openSessionModal(${s.id})">✏</button><button class="btn btn-danger btn-sm" onclick="deleteSession(${s.id})">✕</button></td></tr>`;
+  }).join('');
+}
+
+function renderRecentSessions() {
+  const tbody=document.getElementById('recent-sessions');
+  const data=allSessions.slice(0,5);
+  if(!data.length){tbody.innerHTML='<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:1rem">Noch keine Sessions</td></tr>';return;}
+  tbody.innerHTML=data.map(s=>{
+    const p=s.profit,cls=p>0?'profit-pos':p<0?'profit-neg':'';
+    return`<tr><td>${fmtDate(s.date)}</td><td>${s.location||'—'}</td><td>${s.game_type}</td><td>$${s.buy_in}</td><td>$${s.cash_out}</td><td class="${cls}">${fmtMoney(p)}</td></tr>`;
+  }).join('');
+}
+
+function openSessionModal(id=null) {
+  editingSessionId=id;
+  document.getElementById('session-modal-title').textContent=id?'Session bearbeiten':'Session erfassen';
+  if(id){const s=allSessions.find(x=>x.id===id);document.getElementById('s-date').value=s.date;document.getElementById('s-location').value=s.location||'';document.getElementById('s-game').value=s.game_type;document.getElementById('s-stakes').value=s.stakes||'';document.getElementById('s-buyin').value=s.buy_in;document.getElementById('s-cashout').value=s.cash_out;document.getElementById('s-duration').value=s.duration_minutes||'';document.getElementById('s-notes').value=s.notes||'';}
+  else{document.getElementById('s-date').value=new Date().toISOString().split('T')[0];['s-location','s-buyin','s-cashout','s-duration','s-notes'].forEach(id=>document.getElementById(id).value='');}
+  openModal('session-modal');
+}
+
+async function saveSession() {
+  const body={date:document.getElementById('s-date').value,location:document.getElementById('s-location').value||null,game_type:document.getElementById('s-game').value,stakes:document.getElementById('s-stakes').value||null,buy_in:parseFloat(document.getElementById('s-buyin').value),cash_out:parseFloat(document.getElementById('s-cashout').value),duration_minutes:parseInt(document.getElementById('s-duration').value)||null,notes:document.getElementById('s-notes').value||null};
+  try{if(editingSessionId)await api(`/sessions/${editingSessionId}`,'PUT',body);else await api('/sessions/','POST',body);closeModal('session-modal');await loadSessions();renderDashboard();}
+  catch(e){alert('Fehler: '+(e.detail||JSON.stringify(e)));}
+}
+
+async function deleteSession(id){if(!confirm('Session löschen?'))return;await api(`/sessions/${id}`,'DELETE');await loadSessions();renderDashboard();}
+
+function renderDashboard() {
+  const sorted=[...allSessions].sort((a,b)=>a.date.localeCompare(b.date));
+  let cum=0;const points=sorted.map(s=>{cum+=s.profit;return cum;});
+  drawLineChart('bankroll-chart',points);
+  // update stat cards
+  if(allSessions.length){
+    const profits=allSessions.map(s=>s.profit);
+    const tp=profits.reduce((a,b)=>a+b,0);
+    const tbi=allSessions.reduce((a,s)=>a+s.buy_in,0);
+    const wins=profits.filter(p=>p>0);
+    setVal('s-total-profit','$'+(tp>=0?'+':'')+tp.toFixed(0),tp>0?'pos':tp<0?'neg':'neutral');
+    setVal('s-sessions',allSessions.length,'neutral');
+    setVal('s-winrate',(wins.length/profits.length*100).toFixed(1)+'%',wins.length/profits.length>=0.5?'pos':'neg');
+    setVal('s-roi',tbi>0?(tp/tbi*100).toFixed(1)+'%':'—',tp>0?'pos':tp<0?'neg':'neutral');
+    setVal('s-avg',fmtMoney(tp/profits.length),tp>=0?'pos':'neg');
+    const hrs=allSessions.reduce((a,s)=>a+(s.duration_minutes||0),0)/60;
+    setVal('s-hr',hrs>0?fmtMoney(tp/hrs)+'/h':'—',tp>=0?'pos':'neg');
+    setVal('s-bigwin','+$'+Math.max(...profits).toFixed(0),'pos');
+    setVal('s-bigloss','$'+Math.min(...profits).toFixed(0),'neg');
+  }
+}
+
+function setVal(id,val,cls){const el=document.getElementById(id);if(el){el.textContent=val;el.className='stat-value '+(cls||'neutral');}}
+
+function drawLineChart(id,data) {
+  const canvas=document.getElementById(id);if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.offsetWidth||600,H=canvas.offsetHeight||120;
+  canvas.width=W;canvas.height=H;ctx.clearRect(0,0,W,H);
+  if(!data.length){ctx.fillStyle='#7a8a7a';ctx.font='14px sans-serif';ctx.fillText('Noch keine Daten',W/2-70,H/2);return;}
+  const pad=20,min=Math.min(0,...data),max=Math.max(0,...data),range=max-min||1;
+  const toY=v=>H-pad-((v-min)/range)*(H-2*pad);
+  const toX=i=>pad+(i/(data.length-1||1))*(W-2*pad);
+  const zy=toY(0);
+  ctx.strokeStyle='#2a3a2a';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(pad,zy);ctx.lineTo(W-pad,zy);ctx.stroke();ctx.setLineDash([]);
+  const last=data[data.length-1];
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  if(last>=0){grad.addColorStop(0,'rgba(45,143,78,0.3)');grad.addColorStop(1,'rgba(45,143,78,0)');}
+  else{grad.addColorStop(0,'rgba(192,57,43,0)');grad.addColorStop(1,'rgba(192,57,43,0.25)');}
+  ctx.beginPath();ctx.moveTo(toX(0),toY(data[0]));
+  data.forEach((v,i)=>ctx.lineTo(toX(i),toY(v)));
+  ctx.lineTo(toX(data.length-1),H);ctx.lineTo(toX(0),H);ctx.closePath();
+  ctx.fillStyle=grad;ctx.fill();
+  ctx.beginPath();ctx.lineWidth=2;ctx.strokeStyle=last>=0?'#2d8f4e':'#c0392b';
+  ctx.moveTo(toX(0),toY(data[0]));data.forEach((v,i)=>ctx.lineTo(toX(i),toY(v)));ctx.stroke();
+  const lx=toX(data.length-1),ly=toY(data[data.length-1]);
+  ctx.beginPath();ctx.arc(lx,ly,4,0,Math.PI*2);ctx.fillStyle=last>=0?'#2d8f4e':'#c0392b';ctx.fill();
+}
+
+const MONTHS=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+function setTFilter(f){tournamentFilter=f;document.querySelectorAll('[id^="tf-"]').forEach(b=>b.classList.remove('btn-primary'));document.getElementById(`tf-${f}`)?.classList.add('btn-primary');renderTournaments();}
+
+function renderTournaments() {
+  const today=new Date().toISOString().split('T')[0];
+  let data=allTournaments;
+  if(tournamentFilter==='upcoming') data=data.filter(t=>!t.start_date||t.start_date>=today);
+  else if(tournamentFilter==='entered') data=data.filter(t=>t.entry);
+  const list=document.getElementById('tournament-list');
+  const empty=document.getElementById('tournaments-empty');
+  if(!data.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  list.innerHTML=data.map(t=>{
+    const d=t.start_date?new Date(t.start_date):null;
+    const day=d?d.getUTCDate():'?',month=d?MONTHS[d.getUTCMonth()]:'';
+    const badge=t.is_global?'<span class="t-badge global-badge">Global</span>':'<span class="t-badge own-badge">Eigenes</span>';
+    const entry=t.entry?`<div class="entry-result ${t.entry.prize_money>0?'won':''}">✓ Angemeldet${t.entry.result_position?` · Platz ${t.entry.result_position}`:''}${t.entry.prize_money>0?` · $${t.entry.prize_money}`:''}</div>`:'';
+    const canEdit=t.created_by_name===currentUser.name||currentUser.is_admin;
+    const editBtns=canEdit?`<button class="btn btn-ghost btn-sm" onclick="openTournamentModal(${t.id})">✏</button><button class="btn btn-danger btn-sm" onclick="deleteTournament(${t.id})">✕</button>`:'';
+    return`<div class="tournament-item ${t.is_global?'global':'personal'}">
+      <div class="t-date"><div class="t-date-day">${day}</div><div class="t-date-month">${month}</div></div>
+      <div class="t-info">
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap"><span class="t-name">${t.name}</span>${badge}</div>
+        <div class="t-meta">${t.series?`<span class="t-series">${t.series}</span> · `:''}${t.location||''}${t.buy_in?` · <span class="t-buyin">$${t.buy_in}</span>`:''} · ${t.game_type}${t.end_date&&t.end_date!==t.start_date?` · bis ${fmtDate(t.end_date)}`:''}</div>
+        ${entry}
+      </div>
+      <div class="t-actions">
+        <button class="btn ${t.entry?'btn-ghost':'btn-gold'} btn-sm" onclick="openEntryModal(${t.id})">${t.entry?'Ergebnis':'+ Anmelden'}</button>
+        <div style="display:flex;gap:0.3rem">${editBtns}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openTournamentModal(id=null) {
+  editingTournamentId=id;
+  document.getElementById('tournament-modal-title').textContent=id?'Turnier bearbeiten':'Turnier hinzufügen';
+  document.getElementById('global-toggle').style.display=currentUser.is_admin?'block':'none';
+  if(id){const t=allTournaments.find(x=>x.id===id);document.getElementById('t-name').value=t.name;document.getElementById('t-series').value=t.series||'';document.getElementById('t-location').value=t.location||'';document.getElementById('t-start').value=t.start_date||'';document.getElementById('t-end').value=t.end_date||'';document.getElementById('t-buyin').value=t.buy_in||'';document.getElementById('t-game').value=t.game_type;document.getElementById('t-global').checked=t.is_global;}
+  else{['t-name','t-series','t-location','t-start','t-end','t-buyin'].forEach(i=>document.getElementById(i).value='');document.getElementById('t-global').checked=false;}
+  openModal('tournament-modal');
+}
+
+async function saveTournament() {
+  const body={name:document.getElementById('t-name').value,series:document.getElementById('t-series').value||null,location:document.getElementById('t-location').value||null,start_date:document.getElementById('t-start').value||null,end_date:document.getElementById('t-end').value||null,buy_in:parseFloat(document.getElementById('t-buyin').value)||null,game_type:document.getElementById('t-game').value,is_global:document.getElementById('t-global').checked};
+  try{if(editingTournamentId)await api(`/tournaments/${editingTournamentId}`,'PUT',body);else await api('/tournaments/','POST',body);closeModal('tournament-modal');await loadTournaments();}
+  catch(e){alert('Fehler: '+(e.detail||JSON.stringify(e)));}
+}
+
+async function deleteTournament(id){if(!confirm('Turnier löschen?'))return;await api(`/tournaments/${id}`,'DELETE');await loadTournaments();}
+
+function openEntryModal(tid) {
+  entryTournamentId=tid;
+  const t=allTournaments.find(x=>x.id===tid);
+  document.getElementById('entry-modal-title').textContent=t.name;
+  const rb=document.getElementById('entry-remove-btn');
+  if(t.entry){document.getElementById('e-position').value=t.entry.result_position||'';document.getElementById('e-prize').value=t.entry.prize_money||0;document.getElementById('e-notes').value=t.entry.notes||'';rb.style.display='block';}
+  else{document.getElementById('e-position').value='';document.getElementById('e-prize').value='0';document.getElementById('e-notes').value='';rb.style.display='none';}
+  openModal('entry-modal');
+}
+
+async function saveEntry(){const body={result_position:parseInt(document.getElementById('e-position').value)||null,prize_money:parseFloat(document.getElementById('e-prize').value)||0,notes:document.getElementById('e-notes').value||null};await api(`/tournaments/${entryTournamentId}/entry`,'PUT',body);closeModal('entry-modal');await loadTournaments();}
+async function removeEntry(){if(!confirm('Anmeldung entfernen?'))return;await api(`/tournaments/${entryTournamentId}/entry`,'DELETE');closeModal('entry-modal');await loadTournaments();}
+
+async function loadStats() {
+  const [sum,monthly,ts]=await Promise.all([api('/stats/summary'),api('/stats/monthly'),api('/stats/tournaments')]);
+  const p=sum.total_profit;
+  setVal('s-total-profit','$'+(p>=0?'+':'')+p.toFixed(0),p>0?'pos':p<0?'neg':'neutral');
+  setVal('s-sessions',sum.total_sessions,'neutral');
+  setVal('s-winrate',sum.win_rate+'%',sum.win_rate>=50?'pos':'neg');
+  setVal('s-roi',sum.roi+'%',sum.roi>0?'pos':sum.roi<0?'neg':'neutral');
+  setVal('s-avg',fmtMoney(sum.avg_profit_per_session),sum.avg_profit_per_session>=0?'pos':'neg');
+  setVal('s-hr',fmtMoney(sum.profit_per_hour)+'/h',sum.profit_per_hour>=0?'pos':'neg');
+  setVal('s-bigwin','+$'+sum.biggest_win,'pos');
+  setVal('s-bigloss','$'+sum.biggest_loss,'neg');
+  document.getElementById('ts-entered').textContent=ts.total_entered;
+  document.getElementById('ts-invested').textContent='$'+ts.total_invested;
+  document.getElementById('ts-winnings').textContent='$'+ts.total_winnings;
+  const tp=ts.tournament_profit;
+  setVal('ts-profit',(tp>=0?'+':'')+'$'+tp,tp>0?'pos':tp<0?'neg':'neutral');
+  document.getElementById('ts-itm').textContent=ts.itm_rate+'%';
+  drawMonthlyChart('monthly-chart',monthly);
+}
+
+function drawMonthlyChart(id,data) {
+  const canvas=document.getElementById(id);if(!canvas||!data.length)return;
+  const W=canvas.offsetWidth||700,H=160;canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,W,H);
+  const profits=data.map(d=>d.profit),max=Math.max(0,...profits),min=Math.min(0,...profits),range=max-min||1;
+  const pad={top:10,bottom:30,left:10,right:10};
+  const bw=Math.max(10,(W-pad.left-pad.right)/data.length-4);
+  const toY=v=>pad.top+((max-v)/range)*(H-pad.top-pad.bottom),zy=toY(0);
+  ctx.strokeStyle='#2a3a2a';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(pad.left,zy);ctx.lineTo(W-pad.right,zy);ctx.stroke();ctx.setLineDash([]);
+  data.forEach((d,i)=>{
+    const x=pad.left+i*((W-pad.left-pad.right)/data.length)+2;
+    const p=d.profit,barH=Math.abs(toY(p)-zy),y=p>=0?zy-barH:zy;
+    ctx.fillStyle=p>=0?'#2d8f4e':'#c0392b';ctx.fillRect(x,y,bw,Math.max(2,barH));
+    ctx.fillStyle='#7a8a7a';ctx.font='10px sans-serif';ctx.fillText(d.month.slice(5),x+bw/2-10,H-6);
+  });
+}
+
+async function createUser() {
+  const name=document.getElementById('new-user-name').value.trim();
+  const pin=document.getElementById('new-user-pin').value.trim();
+  const is_admin=document.getElementById('new-user-admin').checked;
+  const msg=document.getElementById('create-user-msg');
+  if(!name||pin.length<4){msg.style.color='var(--red)';msg.textContent='Name und 4-stellige PIN erforderlich';return;}
+  try{await api('/auth/users','POST',{name,pin,is_admin});msg.style.color='var(--green-hi)';msg.textContent=`✓ Nutzer "${name}" angelegt`;document.getElementById('new-user-name').value='';document.getElementById('new-user-pin').value='';}
+  catch(e){msg.style.color='var(--red)';msg.textContent=e.detail||'Fehler';}
+}
+
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+fetchUsers();
+if(token&&currentUser){enterApp();}else{document.getElementById('login-screen').style.display='flex';}
+window.addEventListener('resize',()=>{if(allSessions.length)renderDashboard();});
+setTFilter('upcoming');
+</script>
+</body>
+</html>
