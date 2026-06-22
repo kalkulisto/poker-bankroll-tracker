@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Poker Bankroll Tracker</title>
+<title>Chico und Zwieback</title>
 <style>
   :root {
     --bg:       #0a0f0a;
@@ -144,8 +144,8 @@
 
 <div id="login-screen">
   <div class="logo">
-    <div class="logo-suits">♠ ♥ ♦ ♣</div>
-    <div class="logo-title">Bankroll Tracker</div>
+    <div class="logo-suits">&#9824; &#9829; &#9830; &#9827;</div>
+    <div class="logo-title">Chico und Zwieback</div>
     <div class="logo-sub">Las Vegas Series</div>
   </div>
   <div>
@@ -164,7 +164,7 @@
 
 <div id="app">
   <header>
-    <span class="header-logo">♠ BR Tracker</span>
+    <span class="header-logo">&#9824; Chico &amp; Zwieback</span>
     <nav>
       <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
       <button class="nav-btn" onclick="showPage('sessions')">Sessions</button>
@@ -179,14 +179,14 @@
   <main>
     <div class="page active" id="page-dashboard">
       <div class="stat-grid">
-        <div class="stat-card"><div class="stat-label">Gesamtprofit</div><div class="stat-value neutral" id="s-total-profit">—</div></div>
-        <div class="stat-card"><div class="stat-label">Sessions</div><div class="stat-value neutral" id="s-sessions">—</div></div>
-        <div class="stat-card"><div class="stat-label">Win Rate</div><div class="stat-value neutral" id="s-winrate">—</div></div>
-        <div class="stat-card"><div class="stat-label">ROI</div><div class="stat-value neutral" id="s-roi">—</div></div>
-        <div class="stat-card"><div class="stat-label">Ø / Session</div><div class="stat-value neutral" id="s-avg">—</div></div>
-        <div class="stat-card"><div class="stat-label">Ø / Stunde</div><div class="stat-value neutral" id="s-hr">—</div></div>
-        <div class="stat-card"><div class="stat-label">Größter Win</div><div class="stat-value neutral" id="s-bigwin">—</div></div>
-        <div class="stat-card"><div class="stat-label">Größter Loss</div><div class="stat-value neutral" id="s-bigloss">—</div></div>
+        <div class="stat-card"><div class="stat-label">Gesamtprofit</div><div class="stat-value neutral" id="s-total-profit">&#8212;</div></div>
+        <div class="stat-card"><div class="stat-label">Sessions</div><div class="stat-value neutral" id="s-sessions">&#8212;</div></div>
+        <div class="stat-card"><div class="stat-label">Win Rate</div><div class="stat-value neutral" id="s-winrate">&#8212;</div></div>
+        <div class="stat-card"><div class="stat-label">ROI</div><div class="stat-value neutral" id="s-roi">&#8212;</div></div>
+        <div class="stat-card"><div class="stat-label">&#216; / Session</div><div class="stat-value neutral" id="s-avg">&#8212;</div></div>
+        <div class="stat-card"><div class="stat-label">&#216; / Stunde</div><div class="stat-value neutral" id="s-hr">&#8212;</div></div>
+        <div class="stat-card"><div class="stat-label">Gr&#246;&#223;ter Win</div><div class="stat-value neutral" id="s-bigwin">&#8212;</div></div>
+        <div class="stat-card"><div class="stat-label">Gr&#246;&#223;ter Loss</div><div class="stat-value neutral" id="s-bigloss">&#8212;</div></div>
       </div>
       <div class="panel">
         <div class="panel-title">Bankroll-Verlauf</div>
@@ -195,7 +195,7 @@
       <div class="panel">
         <div class="section-header">
           <div class="section-title">Letzte Sessions</div>
-          <button class="btn btn-ghost btn-sm" onclick="showPage('sessions')">Alle →</button>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('sessions')">Alle &#8594;</button>
         </div>
         <table class="data-table">
           <thead><tr><th>Datum</th><th>Ort</th><th>Spiel</th><th>Buy-in</th><th>Cash-out</th><th>Profit</th></tr></thead>
@@ -214,14 +214,15 @@
           <input class="form-input" id="session-filter-loc" placeholder="Ort filtern..." oninput="renderSessions()">
           <select class="form-select" id="session-filter-game" style="max-width:180px" onchange="renderSessions()">
             <option value="">Alle Spiele</option>
-            <option>NL Hold'em</option><option>PLO</option><option>7-Card Stud</option><option>Mixed</option>
+            <option>NL Hold'em</option>
+            <option>PLO</option>
           </select>
         </div>
         <table class="data-table">
           <thead><tr><th>Datum</th><th>Ort</th><th>Spiel</th><th>Stakes</th><th>Buy-in</th><th>Cash-out</th><th>Profit</th><th>Dauer</th><th></th></tr></thead>
           <tbody id="session-table"></tbody>
         </table>
-        <div id="sessions-empty" class="empty-state" style="display:none"><div class="empty-state-icon">🃏</div><p>Noch keine Sessions.</p></div>
+        <div id="sessions-empty" class="empty-state" style="display:none"><div class="empty-state-icon">&#127183;</div><p>Noch keine Sessions.</p></div>
       </div>
     </div>
 
@@ -236,7 +237,7 @@
         <button class="btn btn-ghost btn-sm" id="tf-entered" onclick="setTFilter('entered')">Angemeldet</button>
       </div>
       <div class="tournament-list" id="tournament-list"></div>
-      <div id="tournaments-empty" class="empty-state" style="display:none"><div class="empty-state-icon">🏆</div><p>Keine Turniere.</p></div>
+      <div id="tournaments-empty" class="empty-state" style="display:none"><div class="empty-state-icon">&#127942;</div><p>Keine Turniere.</p></div>
     </div>
 
     <div class="page" id="page-stats">
@@ -245,18 +246,18 @@
         <canvas id="monthly-chart" height="160"></canvas>
       </div>
       <div class="stat-grid" style="margin-bottom:0">
-        <div class="stat-card"><div class="stat-label">Turniere gespielt</div><div class="stat-value neutral" id="ts-entered">—</div></div>
-        <div class="stat-card"><div class="stat-label">Invested</div><div class="stat-value neutral" id="ts-invested">—</div></div>
-        <div class="stat-card"><div class="stat-label">Gewonnen</div><div class="stat-value neutral" id="ts-winnings">—</div></div>
-        <div class="stat-card"><div class="stat-label">Turnier Profit</div><div class="stat-value neutral" id="ts-profit">—</div></div>
-        <div class="stat-card"><div class="stat-label">ITM Rate</div><div class="stat-value neutral" id="ts-itm">—</div></div>
+        <div class="stat-card"><div class="stat-label">Turniere gespielt</div><div class="stat-value neutral" id="ts-entered">&#8212;</div></div>
+        <div class="stat-card"><div class="stat-label">Invested</div><div class="stat-value neutral" id="ts-invested">&#8212;</div></div>
+        <div class="stat-card"><div class="stat-label">Gewonnen</div><div class="stat-value neutral" id="ts-winnings">&#8212;</div></div>
+        <div class="stat-card"><div class="stat-label">Turnier Profit</div><div class="stat-value neutral" id="ts-profit">&#8212;</div></div>
+        <div class="stat-card"><div class="stat-label">ITM Rate</div><div class="stat-value neutral" id="ts-itm">&#8212;</div></div>
       </div>
       <div id="admin-section" style="display:none;margin-top:1rem">
         <div class="panel">
           <div class="panel-title">Admin: Neuen Nutzer anlegen</div>
           <div class="form-grid">
             <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="new-user-name" placeholder="Spielername"></div>
-            <div class="form-group"><label class="form-label">PIN (4-stellig)</label><input class="form-input" id="new-user-pin" type="password" maxlength="4" placeholder="••••"></div>
+            <div class="form-group"><label class="form-label">PIN (4-stellig)</label><input class="form-input" id="new-user-pin" type="password" maxlength="4" placeholder="&#8226;&#8226;&#8226;&#8226;"></div>
           </div>
           <div class="checkbox-row" style="margin-top:0.5rem"><input type="checkbox" id="new-user-admin"><label for="new-user-admin">Admin-Rechte</label></div>
           <div style="margin-top:0.75rem"><button class="btn btn-gold" onclick="createUser()">Nutzer anlegen</button></div>
@@ -269,11 +270,16 @@
 
 <div class="modal-overlay" id="session-modal">
   <div class="modal">
-    <div class="modal-title"><span id="session-modal-title">Session erfassen</span><button class="modal-close" onclick="closeModal('session-modal')">✕</button></div>
+    <div class="modal-title"><span id="session-modal-title">Session erfassen</span><button class="modal-close" onclick="closeModal('session-modal')">&#10005;</button></div>
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Datum</label><input class="form-input" type="date" id="s-date"></div>
       <div class="form-group"><label class="form-label">Ort / Casino</label><input class="form-input" id="s-location" placeholder="z.B. Bellagio, WSOP"></div>
-      <div class="form-group"><label class="form-label">Spieltyp</label><select class="form-select" id="s-game"><option>NL Hold'em</option><option>PLO</option><option>7-Card Stud</option><option>Mixed</option><option>Other</option></select></div>
+      <div class="form-group"><label class="form-label">Spieltyp</label>
+        <select class="form-select" id="s-game">
+          <option>NL Hold'em</option>
+          <option>PLO</option>
+        </select>
+      </div>
       <div class="form-group"><label class="form-label">Stakes</label><input class="form-input" id="s-stakes" placeholder="z.B. 1/2, 2/5, 5/10"></div>
       <div class="form-group"><label class="form-label">Buy-in ($)</label><input class="form-input" type="number" id="s-buyin" min="0" step="1"></div>
       <div class="form-group"><label class="form-label">Cash-out ($)</label><input class="form-input" type="number" id="s-cashout" min="0" step="1"></div>
@@ -289,7 +295,7 @@
 
 <div class="modal-overlay" id="tournament-modal">
   <div class="modal">
-    <div class="modal-title"><span id="tournament-modal-title">Turnier hinzufügen</span><button class="modal-close" onclick="closeModal('tournament-modal')">✕</button></div>
+    <div class="modal-title"><span id="tournament-modal-title">Turnier hinzuf&#252;gen</span><button class="modal-close" onclick="closeModal('tournament-modal')">&#10005;</button></div>
     <div class="form-grid">
       <div class="form-group full"><label class="form-label">Turniername</label><input class="form-input" id="t-name" placeholder="z.B. Main Event, Monster Stack"></div>
       <div class="form-group"><label class="form-label">Serie</label><input class="form-input" id="t-series" placeholder="z.B. WSOP, Venetian, Wynn"></div>
@@ -297,9 +303,14 @@
       <div class="form-group"><label class="form-label">Startdatum</label><input class="form-input" type="date" id="t-start"></div>
       <div class="form-group"><label class="form-label">Enddatum</label><input class="form-input" type="date" id="t-end"></div>
       <div class="form-group"><label class="form-label">Buy-in ($)</label><input class="form-input" type="number" id="t-buyin" min="0" step="10"></div>
-      <div class="form-group"><label class="form-label">Spieltyp</label><select class="form-select" id="t-game"><option>NL Hold'em</option><option>PLO</option><option>7-Card Stud</option><option>Mixed</option><option>Other</option></select></div>
+      <div class="form-group"><label class="form-label">Spieltyp</label>
+        <select class="form-select" id="t-game">
+          <option>NL Hold'em</option>
+          <option>PLO</option>
+        </select>
+      </div>
       <div class="form-group full" id="global-toggle" style="display:none">
-        <div class="checkbox-row"><input type="checkbox" id="t-global"><label for="t-global">Für alle sichtbar (global)</label></div>
+        <div class="checkbox-row"><input type="checkbox" id="t-global"><label for="t-global">F&#252;r alle sichtbar (global)</label></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -311,7 +322,7 @@
 
 <div class="modal-overlay" id="entry-modal">
   <div class="modal">
-    <div class="modal-title"><span id="entry-modal-title">Ergebnis eintragen</span><button class="modal-close" onclick="closeModal('entry-modal')">✕</button></div>
+    <div class="modal-title"><span id="entry-modal-title">Ergebnis eintragen</span><button class="modal-close" onclick="closeModal('entry-modal')">&#10005;</button></div>
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Platzierung</label><input class="form-input" type="number" id="e-position" min="1" placeholder="z.B. 47"></div>
       <div class="form-group"><label class="form-label">Preisgeld ($)</label><input class="form-input" type="number" id="e-prize" min="0" step="1" value="0"></div>
@@ -336,7 +347,7 @@ let tournamentFilter = 'upcoming';
 async function fetchUsers() {
   const res = await fetch(`${API}/auth/users`);
   const users = await res.json();
-  const avatars = ['♠','♥','♦','♣','★','◆'];
+  const avatars = ['\u2660','\u2665','\u2666','\u2663','\u2605','\u25c6'];
   document.getElementById('user-list').innerHTML = users.map((u,i) =>
     `<div class="user-card" onclick="selectUser(${u.id},'${u.name}',${u.is_admin})" data-uid="${u.id}">
       <div class="user-card-avatar">${avatars[i%avatars.length]}</div>
@@ -357,10 +368,10 @@ function selectUser(id,name,isAdmin) {
 
 let pinValue='';
 function buildPinGrid() {
-  const keys=['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  const keys=['1','2','3','4','5','6','7','8','9','','0','\u232b'];
   document.getElementById('pin-grid').innerHTML=keys.map(k=>{
     if(k==='') return '<div></div>';
-    if(k==='⌫') return `<button class="pin-btn del" onclick="pinDel()">⌫</button>`;
+    if(k==='\u232b') return `<button class="pin-btn del" onclick="pinDel()">\u232b</button>`;
     return `<button class="pin-btn" onclick="pinPress('${k}')">${k}</button>`;
   }).join('');
 }
@@ -417,9 +428,9 @@ async function loadAll() { await Promise.all([loadSessions(),loadTournaments()])
 async function loadSessions() { allSessions=await api('/sessions/'); renderSessions(); renderRecentSessions(); }
 async function loadTournaments() { allTournaments=await api('/tournaments/'); renderTournaments(); }
 
-function fmtMoney(v){const n=parseFloat(v);if(isNaN(n))return'—';return(n>=0?'+':'')+'$'+Math.abs(n).toFixed(0);}
+function fmtMoney(v){const n=parseFloat(v);if(isNaN(n))return'\u2014';return(n>=0?'+':'')+'$'+Math.abs(n).toFixed(0);}
 function fmtDate(s){return new Date(s).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'});}
-function fmtDur(m){if(!m)return'—';const h=Math.floor(m/60),min=m%60;return h?`${h}h ${min}m`:`${min}m`;}
+function fmtDur(m){if(!m)return'\u2014';const h=Math.floor(m/60),min=m%60;return h?`${h}h ${min}m`:`${min}m`;}
 
 function renderSessions() {
   const fl=(document.getElementById('session-filter-loc')?.value||'').toLowerCase();
@@ -431,7 +442,7 @@ function renderSessions() {
   empty.style.display='none';
   tbody.innerHTML=data.map(s=>{
     const p=s.profit,cls=p>0?'profit-pos':p<0?'profit-neg':'';
-    return`<tr><td>${fmtDate(s.date)}</td><td>${s.location||'—'}</td><td>${s.game_type}</td><td>${s.stakes||'—'}</td><td>$${s.buy_in}</td><td>$${s.cash_out}</td><td class="${cls}">${fmtMoney(p)}</td><td>${fmtDur(s.duration_minutes)}</td><td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="openSessionModal(${s.id})">✏</button><button class="btn btn-danger btn-sm" onclick="deleteSession(${s.id})">✕</button></td></tr>`;
+    return`<tr><td>${fmtDate(s.date)}</td><td>${s.location||'\u2014'}</td><td>${s.game_type}</td><td>${s.stakes||'\u2014'}</td><td>$${s.buy_in}</td><td>$${s.cash_out}</td><td class="${cls}">${fmtMoney(p)}</td><td>${fmtDur(s.duration_minutes)}</td><td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="openSessionModal(${s.id})">&#9998;</button><button class="btn btn-danger btn-sm" onclick="deleteSession(${s.id})">&#10005;</button></td></tr>`;
   }).join('');
 }
 
@@ -441,7 +452,7 @@ function renderRecentSessions() {
   if(!data.length){tbody.innerHTML='<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:1rem">Noch keine Sessions</td></tr>';return;}
   tbody.innerHTML=data.map(s=>{
     const p=s.profit,cls=p>0?'profit-pos':p<0?'profit-neg':'';
-    return`<tr><td>${fmtDate(s.date)}</td><td>${s.location||'—'}</td><td>${s.game_type}</td><td>$${s.buy_in}</td><td>$${s.cash_out}</td><td class="${cls}">${fmtMoney(p)}</td></tr>`;
+    return`<tr><td>${fmtDate(s.date)}</td><td>${s.location||'\u2014'}</td><td>${s.game_type}</td><td>$${s.buy_in}</td><td>$${s.cash_out}</td><td class="${cls}">${fmtMoney(p)}</td></tr>`;
   }).join('');
 }
 
@@ -449,7 +460,7 @@ function openSessionModal(id=null) {
   editingSessionId=id;
   document.getElementById('session-modal-title').textContent=id?'Session bearbeiten':'Session erfassen';
   if(id){const s=allSessions.find(x=>x.id===id);document.getElementById('s-date').value=s.date;document.getElementById('s-location').value=s.location||'';document.getElementById('s-game').value=s.game_type;document.getElementById('s-stakes').value=s.stakes||'';document.getElementById('s-buyin').value=s.buy_in;document.getElementById('s-cashout').value=s.cash_out;document.getElementById('s-duration').value=s.duration_minutes||'';document.getElementById('s-notes').value=s.notes||'';}
-  else{document.getElementById('s-date').value=new Date().toISOString().split('T')[0];['s-location','s-buyin','s-cashout','s-duration','s-notes'].forEach(id=>document.getElementById(id).value='');}
+  else{document.getElementById('s-date').value=new Date().toISOString().split('T')[0];['s-location','s-buyin','s-cashout','s-duration','s-notes'].forEach(i=>document.getElementById(i).value='');}
   openModal('session-modal');
 }
 
@@ -459,13 +470,12 @@ async function saveSession() {
   catch(e){alert('Fehler: '+(e.detail||JSON.stringify(e)));}
 }
 
-async function deleteSession(id){if(!confirm('Session löschen?'))return;await api(`/sessions/${id}`,'DELETE');await loadSessions();renderDashboard();}
+async function deleteSession(id){if(!confirm('Session l\u00f6schen?'))return;await api(`/sessions/${id}`,'DELETE');await loadSessions();renderDashboard();}
 
 function renderDashboard() {
   const sorted=[...allSessions].sort((a,b)=>a.date.localeCompare(b.date));
   let cum=0;const points=sorted.map(s=>{cum+=s.profit;return cum;});
   drawLineChart('bankroll-chart',points);
-  // update stat cards
   if(allSessions.length){
     const profits=allSessions.map(s=>s.profit);
     const tp=profits.reduce((a,b)=>a+b,0);
@@ -474,10 +484,10 @@ function renderDashboard() {
     setVal('s-total-profit','$'+(tp>=0?'+':'')+tp.toFixed(0),tp>0?'pos':tp<0?'neg':'neutral');
     setVal('s-sessions',allSessions.length,'neutral');
     setVal('s-winrate',(wins.length/profits.length*100).toFixed(1)+'%',wins.length/profits.length>=0.5?'pos':'neg');
-    setVal('s-roi',tbi>0?(tp/tbi*100).toFixed(1)+'%':'—',tp>0?'pos':tp<0?'neg':'neutral');
+    setVal('s-roi',tbi>0?(tp/tbi*100).toFixed(1)+'%':'\u2014',tp>0?'pos':tp<0?'neg':'neutral');
     setVal('s-avg',fmtMoney(tp/profits.length),tp>=0?'pos':'neg');
     const hrs=allSessions.reduce((a,s)=>a+(s.duration_minutes||0),0)/60;
-    setVal('s-hr',hrs>0?fmtMoney(tp/hrs)+'/h':'—',tp>=0?'pos':'neg');
+    setVal('s-hr',hrs>0?fmtMoney(tp/hrs)+'/h':'\u2014',tp>=0?'pos':'neg');
     setVal('s-bigwin','+$'+Math.max(...profits).toFixed(0),'pos');
     setVal('s-bigloss','$'+Math.min(...profits).toFixed(0),'neg');
   }
@@ -511,7 +521,7 @@ function drawLineChart(id,data) {
   ctx.beginPath();ctx.arc(lx,ly,4,0,Math.PI*2);ctx.fillStyle=last>=0?'#2d8f4e':'#c0392b';ctx.fill();
 }
 
-const MONTHS=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const MONTHS=['Jan','Feb','M\u00e4r','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 function setTFilter(f){tournamentFilter=f;document.querySelectorAll('[id^="tf-"]').forEach(b=>b.classList.remove('btn-primary'));document.getElementById(`tf-${f}`)?.classList.add('btn-primary');renderTournaments();}
 
 function renderTournaments() {
@@ -527,14 +537,14 @@ function renderTournaments() {
     const d=t.start_date?new Date(t.start_date):null;
     const day=d?d.getUTCDate():'?',month=d?MONTHS[d.getUTCMonth()]:'';
     const badge=t.is_global?'<span class="t-badge global-badge">Global</span>':'<span class="t-badge own-badge">Eigenes</span>';
-    const entry=t.entry?`<div class="entry-result ${t.entry.prize_money>0?'won':''}">✓ Angemeldet${t.entry.result_position?` · Platz ${t.entry.result_position}`:''}${t.entry.prize_money>0?` · $${t.entry.prize_money}`:''}</div>`:'';
+    const entry=t.entry?`<div class="entry-result ${t.entry.prize_money>0?'won':''}">&#10003; Angemeldet${t.entry.result_position?` \u00b7 Platz ${t.entry.result_position}`:''}${t.entry.prize_money>0?` \u00b7 $${t.entry.prize_money}`:''}</div>`:'';
     const canEdit=t.created_by_name===currentUser.name||currentUser.is_admin;
-    const editBtns=canEdit?`<button class="btn btn-ghost btn-sm" onclick="openTournamentModal(${t.id})">✏</button><button class="btn btn-danger btn-sm" onclick="deleteTournament(${t.id})">✕</button>`:'';
+    const editBtns=canEdit?`<button class="btn btn-ghost btn-sm" onclick="openTournamentModal(${t.id})">&#9998;</button><button class="btn btn-danger btn-sm" onclick="deleteTournament(${t.id})">&#10005;</button>`:'';
     return`<div class="tournament-item ${t.is_global?'global':'personal'}">
       <div class="t-date"><div class="t-date-day">${day}</div><div class="t-date-month">${month}</div></div>
       <div class="t-info">
         <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap"><span class="t-name">${t.name}</span>${badge}</div>
-        <div class="t-meta">${t.series?`<span class="t-series">${t.series}</span> · `:''}${t.location||''}${t.buy_in?` · <span class="t-buyin">$${t.buy_in}</span>`:''} · ${t.game_type}${t.end_date&&t.end_date!==t.start_date?` · bis ${fmtDate(t.end_date)}`:''}</div>
+        <div class="t-meta">${t.series?`<span class="t-series">${t.series}</span> \u00b7 `:''}${t.location||''}${t.buy_in?` \u00b7 <span class="t-buyin">$${t.buy_in}</span>`:''} \u00b7 ${t.game_type}${t.end_date&&t.end_date!==t.start_date?` \u00b7 bis ${fmtDate(t.end_date)}`:''}</div>
         ${entry}
       </div>
       <div class="t-actions">
@@ -547,7 +557,7 @@ function renderTournaments() {
 
 function openTournamentModal(id=null) {
   editingTournamentId=id;
-  document.getElementById('tournament-modal-title').textContent=id?'Turnier bearbeiten':'Turnier hinzufügen';
+  document.getElementById('tournament-modal-title').textContent=id?'Turnier bearbeiten':'Turnier hinzuf\u00fcgen';
   document.getElementById('global-toggle').style.display=currentUser.is_admin?'block':'none';
   if(id){const t=allTournaments.find(x=>x.id===id);document.getElementById('t-name').value=t.name;document.getElementById('t-series').value=t.series||'';document.getElementById('t-location').value=t.location||'';document.getElementById('t-start').value=t.start_date||'';document.getElementById('t-end').value=t.end_date||'';document.getElementById('t-buyin').value=t.buy_in||'';document.getElementById('t-game').value=t.game_type;document.getElementById('t-global').checked=t.is_global;}
   else{['t-name','t-series','t-location','t-start','t-end','t-buyin'].forEach(i=>document.getElementById(i).value='');document.getElementById('t-global').checked=false;}
@@ -560,7 +570,7 @@ async function saveTournament() {
   catch(e){alert('Fehler: '+(e.detail||JSON.stringify(e)));}
 }
 
-async function deleteTournament(id){if(!confirm('Turnier löschen?'))return;await api(`/tournaments/${id}`,'DELETE');await loadTournaments();}
+async function deleteTournament(id){if(!confirm('Turnier l\u00f6schen?'))return;await api(`/tournaments/${id}`,'DELETE');await loadTournaments();}
 
 function openEntryModal(tid) {
   entryTournamentId=tid;
@@ -619,7 +629,7 @@ async function createUser() {
   const is_admin=document.getElementById('new-user-admin').checked;
   const msg=document.getElementById('create-user-msg');
   if(!name||pin.length<4){msg.style.color='var(--red)';msg.textContent='Name und 4-stellige PIN erforderlich';return;}
-  try{await api('/auth/users','POST',{name,pin,is_admin});msg.style.color='var(--green-hi)';msg.textContent=`✓ Nutzer "${name}" angelegt`;document.getElementById('new-user-name').value='';document.getElementById('new-user-pin').value='';}
+  try{await api('/auth/users','POST',{name,pin,is_admin});msg.style.color='var(--green-hi)';msg.textContent=`\u2713 Nutzer "${name}" angelegt`;document.getElementById('new-user-name').value='';document.getElementById('new-user-pin').value='';}
   catch(e){msg.style.color='var(--red)';msg.textContent=e.detail||'Fehler';}
 }
 
