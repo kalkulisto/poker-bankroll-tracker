@@ -53,6 +53,7 @@ def get_tournaments(current_user: dict = Depends(get_current_user)):
     uid = int(current_user["id"])
     tournaments = sheets.all_rows("poker_tournaments")
     entries = sheets.all_rows("poker_entries")
+    tournament_ids = {int(t["id"]) for t in tournaments}
 
     result = []
     for t in tournaments:
@@ -110,6 +111,10 @@ def delete_tournament(tournament_id: int, current_user: dict = Depends(get_curre
     if int(t["created_by"]) != int(current_user["id"]) and str(current_user.get("is_admin", "")).lower() != "true":
         raise HTTPException(status_code=403, detail="Keine Berechtigung")
     sheets.delete_row("poker_tournaments", tournament_id)
+    # Alle verwaisten Entries mitlöschen (rueckwaerts iterieren da Zeilen verschoben werden)
+    entries = sheets.all_rows("poker_entries")
+    for e in reversed([e for e in entries if int(e["tournament_id"]) == tournament_id]):
+        sheets.delete_row("poker_entries", int(e["id"]))
     return {"ok": True}
 
 

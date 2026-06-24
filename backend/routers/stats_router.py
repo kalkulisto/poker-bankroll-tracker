@@ -69,15 +69,18 @@ def get_monthly(current_user: dict = Depends(get_current_user)):
 @router.get("/tournaments")
 def get_tournament_stats(current_user: dict = Depends(get_current_user)):
     uid = int(current_user["id"])
-    entries = [e for e in sheets.all_rows("poker_entries") if int(e["user_id"]) == uid]
+    all_entries = sheets.all_rows("poker_entries")
     tournaments = {int(t["id"]): t for t in sheets.all_rows("poker_tournaments")}
+
+    # Nur Entries mit noch existierendem Turnier beruecksichtigen
+    entries = [e for e in all_entries
+               if int(e["user_id"]) == uid and int(e["tournament_id"]) in tournaments]
 
     if not entries:
         return {"total_entered": 0, "total_invested": 0, "total_winnings": 0,
                 "tournament_profit": 0, "itm_rate": 0}
 
-    total_invested = sum(float(tournaments[int(e["tournament_id"])]["buy_in"] or 0)
-                         for e in entries if int(e["tournament_id"]) in tournaments)
+    total_invested = sum(float(tournaments[int(e["tournament_id"])]["buy_in"] or 0) for e in entries)
     total_winnings = sum(float(e["prize_money"] or 0) for e in entries)
     itm = len([e for e in entries if float(e["prize_money"] or 0) > 0])
 
@@ -92,29 +95,23 @@ def get_tournament_stats(current_user: dict = Depends(get_current_user)):
 
 @router.get("/leaderboard")
 def get_leaderboard(current_user: dict = Depends(get_current_user)):
-    """Rangliste: gemeinsam gespielte Turniere aller User."""
     all_entries = sheets.all_rows("poker_entries")
     all_tournaments = {int(t["id"]): t for t in sheets.all_rows("poker_tournaments")}
     all_users = {int(u["id"]): u["name"] for u in sheets.all_rows("poker_users")}
 
-    # Gruppiere Entries nach Turnier
-    by_tournament = defaultdict(list)
-    for e in all_entries:
-        tid = int(e["tournament_id"])
-        by_tournament[tid].append(e)
+    # Nur Entries mit noch existierendem Turnier
+    valid_entries = [e for e in all_entries if int(e["tournament_id"]) in all_tournaments]
 
-    # Nur Turniere wo mind. 2 verschiedene User eingetragen sind
+    by_tournament = defaultdict(list)
+    for e in valid_entries:
+        by_tournament[int(e["tournament_id"])].append(e)
+
     shared = {tid: entries for tid, entries in by_tournament.items()
               if len(set(int(e["user_id"]) for e in entries)) >= 2}
 
-    # User-Gesamtstatistik über gemeinsame Turniere
     user_stats = defaultdict(lambda: {
-        "total_profit": 0.0,
-        "total_invested": 0.0,
-        "total_winnings": 0.0,
-        "tournaments": 0,
-        "itm": 0,
-        "best_position": None,
+        "total_profit": 0.0, "total_invested": 0.0, "total_winnings": 0.0,
+        "tournaments": 0, "itm": 0, "best_position": None,
     })
 
     tournaments_detail = []
@@ -129,14 +126,8 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
             prize = float(e["prize_money"] or 0)
             pos = int(e["result_position"]) if e["result_position"] else None
             profit = prize - buy_in
-            players.append({
-                "user_id": uid,
-                "name": all_users.get(uid, "?"),
-                "position": pos,
-                "prize_money": prize,
-                "profit": round(profit, 2),
-            })
-            # Gesamtstatistik
+            players.append({"user_id": uid, "name": all_users.get(uid, "?"),
+                             "position": pos, "prize_money": prize, "profit": round(profit, 2)})
             user_stats[uid]["tournaments"] += 1
             user_stats[uid]["total_invested"] += buy_in
             user_stats[uid]["total_winnings"] += prize
@@ -146,37 +137,24 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
             if pos and (user_stats[uid]["best_position"] is None or pos < user_stats[uid]["best_position"]):
                 user_stats[uid]["best_position"] = pos
 
-        # Sortiere Spieler: ITM zuerst, dann nach Position
         players.sort(key=lambda p: (p["position"] or 9999))
-
         tournaments_detail.append({
-            "id": tid,
-            "name": t["name"],
-            "series": t["series"] or None,
-            "start_date": t["start_date"] or None,
-            "buy_in": buy_in,
-            "players": players,
+            "id": tid, "name": t["name"], "series": t["series"] or None,
+            "start_date": t["start_date"] or None, "buy_in": buy_in, "players": players,
         })
 
-    # Rangliste: sortiert nach Gesamtprofit
     leaderboard = []
     for uid, stats in user_stats.items():
         itm_rate = round(stats["itm"] / stats["tournaments"] * 100, 1) if stats["tournaments"] else 0
         roi = round(stats["total_profit"] / stats["total_invested"] * 100, 1) if stats["total_invested"] else 0
         leaderboard.append({
-            "user_id": uid,
-            "name": all_users.get(uid, "?"),
+            "user_id": uid, "name": all_users.get(uid, "?"),
             "tournaments": stats["tournaments"],
             "total_invested": round(stats["total_invested"], 2),
             "total_winnings": round(stats["total_winnings"], 2),
             "total_profit": round(stats["total_profit"], 2),
-            "roi": roi,
-            "itm_rate": itm_rate,
-            "best_position": stats["best_position"],
+            "roi": roi, "itm_rate": itm_rate, "best_position": stats["best_position"],
         })
     leaderboard.sort(key=lambda x: x["total_profit"], reverse=True)
 
-    return {
-        "leaderboard": leaderboard,
-        "tournaments": tournaments_detail,
-    }
+    return {"leaderboard": leaderboard, "tournaments": tournaments_detail}
