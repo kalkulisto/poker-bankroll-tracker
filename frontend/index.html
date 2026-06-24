@@ -14,7 +14,7 @@
 <style>
 :root{--bg:#0a0f0a;--surface:#111811;--card:#162016;--border:#1e2e1e;--felt:#1a4a2a;--green:#2d8f4e;--green-hi:#3db866;--gold:#c9a84c;--gold-dim:#8a6f30;--red:#c0392b;--red-dim:#7d2820;--text:#e8e8e4;--muted:#7a8a7a;}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+html,body{overflow-x:hidden;}body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
 #login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:2rem;background:radial-gradient(ellipse at center,#0d1f10 0%,#0a0f0a 70%);}
 .logo{text-align:center;}
 .logo-suits{font-size:2.8rem;letter-spacing:.4rem;opacity:.85;}
@@ -57,7 +57,7 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
 .stat-value.pos{color:var(--green-hi);}
 .stat-value.neg{color:var(--red);}
 .stat-value.neutral{color:var(--text);}
-.data-table{width:100%;border-collapse:collapse;font-size:.875rem;}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}.data-table{width:100%;border-collapse:collapse;font-size:.875rem;min-width:480px;}
 .data-table th{text-align:left;padding:.5rem .75rem;font-size:.7rem;text-transform:uppercase;letter-spacing:.1rem;color:var(--muted);border-bottom:1px solid var(--border);}
 .data-table td{padding:.75rem;border-bottom:1px solid #1a2a1a;vertical-align:middle;}
 .data-table tr:last-child td{border-bottom:none;}
@@ -221,10 +221,10 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
           <div class="section-title">Letzte Sessions</div>
           <button class="btn btn-ghost btn-sm" onclick="showPage('sessions')">Alle &#8594;</button>
         </div>
-        <table class="data-table">
+        <div class="table-wrap"><table class="data-table">
           <thead><tr><th>Datum</th><th>Ort</th><th>Spiel</th><th>Buy-in</th><th>Cash-out</th><th>Profit</th></tr></thead>
           <tbody id="recent-sessions"></tbody>
-        </table>
+        </table></div>
       </div>
     </div>
 
@@ -242,10 +242,10 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
             <option>PLO</option>
           </select>
         </div>
-        <table class="data-table">
+        <div class="table-wrap"><table class="data-table">
           <thead><tr><th>Datum</th><th>Ort</th><th>Spiel</th><th>Stakes</th><th>Buy-in</th><th>Cash-out</th><th>Profit</th><th>Dauer</th><th></th></tr></thead>
           <tbody id="session-table"></tbody>
-        </table>
+        </table></div>
         <div id="sessions-empty" class="empty-state" style="display:none"><div class="empty-state-icon">&#127183;</div><p>Noch keine Sessions.</p></div>
       </div>
     </div>
