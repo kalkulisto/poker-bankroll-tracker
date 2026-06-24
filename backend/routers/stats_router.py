@@ -108,14 +108,12 @@ def get_tournament_stats(current_user: dict = Depends(get_current_user)):
 @router.get("/combined")
 def get_combined(current_user: dict = Depends(get_current_user)):
     uid = int(current_user["id"])
-
     sessions = [r for r in sheets.all_rows("poker_sessions") if int(r["user_id"]) == uid]
     all_entries = sheets.all_rows("poker_entries")
     tournaments = {int(t["id"]): t for t in sheets.all_rows("poker_tournaments")}
     entries = [e for e in all_entries
                if int(e["user_id"]) == uid and int(e["tournament_id"]) in tournaments]
 
-    # Monatliche Daten mit allen Feldern fuer clientseitiges Filtern
     monthly = defaultdict(lambda: {
         "cash_profit": 0.0, "cash_invested": 0.0, "cash_sessions": 0,
         "tournament_profit": 0.0, "tournament_invested": 0.0, "tournament_count": 0,
@@ -124,9 +122,8 @@ def get_combined(current_user: dict = Depends(get_current_user)):
     for s in sessions:
         key = s["date"][:7]
         p = float(s["cash_out"]) - float(s["buy_in"])
-        bi = float(s["buy_in"])
         monthly[key]["cash_profit"] += round(p, 2)
-        monthly[key]["cash_invested"] += bi
+        monthly[key]["cash_invested"] += float(s["buy_in"])
         monthly[key]["cash_sessions"] += 1
 
     for e in entries:
@@ -146,6 +143,44 @@ def get_combined(current_user: dict = Depends(get_current_user)):
         "cash_hours": round(sum(int(s["duration_minutes"]) for s in sessions if s["duration_minutes"]) / 60, 1),
         "monthly": [{"month": k, **v} for k, v in sorted(monthly.items())],
     }
+
+
+@router.get("/timeline")
+def get_timeline(current_user: dict = Depends(get_current_user)):
+    """Chronologische Events fuer den kumulativen Zeitverlauf-Chart."""
+    uid = int(current_user["id"])
+    sessions = [r for r in sheets.all_rows("poker_sessions") if int(r["user_id"]) == uid]
+    all_entries = sheets.all_rows("poker_entries")
+    tournaments = {int(t["id"]): t for t in sheets.all_rows("poker_tournaments")}
+    entries = [e for e in all_entries
+               if int(e["user_id"]) == uid and int(e["tournament_id"]) in tournaments]
+
+    events = []
+
+    for s in sessions:
+        events.append({
+            "date": s["date"],
+            "type": "cash",
+            "label": s.get("location") or "Cash",
+            "profit": round(float(s["cash_out"]) - float(s["buy_in"]), 2),
+        })
+
+    for e in entries:
+        t = tournaments[int(e["tournament_id"])]
+        date = t.get("start_date", "")
+        if not date:
+            continue
+        buy_in = float(t["buy_in"] or 0)
+        prize = float(e["prize_money"] or 0)
+        events.append({
+            "date": date,
+            "type": "tournament",
+            "label": t["name"],
+            "profit": round(prize - buy_in, 2),
+        })
+
+    events.sort(key=lambda e: e["date"])
+    return events
 
 
 @router.get("/leaderboard")
