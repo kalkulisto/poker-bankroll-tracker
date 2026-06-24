@@ -83,7 +83,6 @@ def get_tournament_stats(current_user: dict = Depends(get_current_user)):
     total_winnings = sum(float(e["prize_money"] or 0) for e in entries)
     itm = len([e for e in entries if float(e["prize_money"] or 0) > 0])
 
-    # Monatliche Turnierdaten (Datum vom Turnier)
     monthly = defaultdict(lambda: {"profit": 0, "tournaments": 0, "invested": 0})
     for e in entries:
         t = tournaments[int(e["tournament_id"])]
@@ -108,35 +107,27 @@ def get_tournament_stats(current_user: dict = Depends(get_current_user)):
 
 @router.get("/combined")
 def get_combined(current_user: dict = Depends(get_current_user)):
-    """Gesamtstatistik: Cash Games + Turniere kombiniert."""
     uid = int(current_user["id"])
 
-    # Cash Games
     sessions = [r for r in sheets.all_rows("poker_sessions") if int(r["user_id"]) == uid]
-    cash_profit = sum(float(s["cash_out"]) - float(s["buy_in"]) for s in sessions)
-    cash_invested = sum(float(s["buy_in"]) for s in sessions)
-    cash_hours = sum(int(s["duration_minutes"]) for s in sessions if s["duration_minutes"]) / 60
-
-    # Turniere
     all_entries = sheets.all_rows("poker_entries")
     tournaments = {int(t["id"]): t for t in sheets.all_rows("poker_tournaments")}
     entries = [e for e in all_entries
                if int(e["user_id"]) == uid and int(e["tournament_id"]) in tournaments]
-    t_invested = sum(float(tournaments[int(e["tournament_id"])]["buy_in"] or 0) for e in entries)
-    t_winnings = sum(float(e["prize_money"] or 0) for e in entries)
-    t_profit = t_winnings - t_invested
 
-    total_profit = cash_profit + t_profit
-    total_invested = cash_invested + t_invested
-
-    # Kombiniertes Monatsdiagramm
-    monthly = defaultdict(lambda: {"profit": 0, "cash_profit": 0, "tournament_profit": 0})
+    # Monatliche Daten mit allen Feldern fuer clientseitiges Filtern
+    monthly = defaultdict(lambda: {
+        "cash_profit": 0.0, "cash_invested": 0.0, "cash_sessions": 0,
+        "tournament_profit": 0.0, "tournament_invested": 0.0, "tournament_count": 0,
+    })
 
     for s in sessions:
         key = s["date"][:7]
         p = float(s["cash_out"]) - float(s["buy_in"])
+        bi = float(s["buy_in"])
         monthly[key]["cash_profit"] += round(p, 2)
-        monthly[key]["profit"] += round(p, 2)
+        monthly[key]["cash_invested"] += bi
+        monthly[key]["cash_sessions"] += 1
 
     for e in entries:
         t = tournaments[int(e["tournament_id"])]
@@ -145,21 +136,14 @@ def get_combined(current_user: dict = Depends(get_current_user)):
             key = date[:7]
             buy_in = float(t["buy_in"] or 0)
             prize = float(e["prize_money"] or 0)
-            p = round(prize - buy_in, 2)
-            monthly[key]["tournament_profit"] += p
-            monthly[key]["profit"] += p
+            monthly[key]["tournament_profit"] += round(prize - buy_in, 2)
+            monthly[key]["tournament_invested"] += buy_in
+            monthly[key]["tournament_count"] += 1
 
     return {
-        "total_profit": round(total_profit, 2),
-        "cash_profit": round(cash_profit, 2),
-        "tournament_profit": round(t_profit, 2),
-        "total_invested": round(total_invested, 2),
-        "cash_invested": round(cash_invested, 2),
-        "tournament_invested": round(t_invested, 2),
-        "roi": round(total_profit / total_invested * 100, 1) if total_invested else 0,
         "total_sessions": len(sessions),
         "total_tournaments": len(entries),
-        "cash_hours": round(cash_hours, 1),
+        "cash_hours": round(sum(int(s["duration_minutes"]) for s in sessions if s["duration_minutes"]) / 60, 1),
         "monthly": [{"month": k, **v} for k, v in sorted(monthly.items())],
     }
 
