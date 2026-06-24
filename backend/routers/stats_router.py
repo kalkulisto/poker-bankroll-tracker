@@ -72,17 +72,29 @@ def get_tournament_stats(current_user: dict = Depends(get_current_user)):
     all_entries = sheets.all_rows("poker_entries")
     tournaments = {int(t["id"]): t for t in sheets.all_rows("poker_tournaments")}
 
-    # Nur Entries mit noch existierendem Turnier beruecksichtigen
     entries = [e for e in all_entries
                if int(e["user_id"]) == uid and int(e["tournament_id"]) in tournaments]
 
     if not entries:
         return {"total_entered": 0, "total_invested": 0, "total_winnings": 0,
-                "tournament_profit": 0, "itm_rate": 0}
+                "tournament_profit": 0, "itm_rate": 0, "monthly": []}
 
     total_invested = sum(float(tournaments[int(e["tournament_id"])]["buy_in"] or 0) for e in entries)
     total_winnings = sum(float(e["prize_money"] or 0) for e in entries)
     itm = len([e for e in entries if float(e["prize_money"] or 0) > 0])
+
+    # Monatliche Turnierdaten (Datum vom Turnier)
+    monthly = defaultdict(lambda: {"profit": 0, "tournaments": 0, "invested": 0})
+    for e in entries:
+        t = tournaments[int(e["tournament_id"])]
+        date = t.get("start_date", "")
+        if date:
+            key = date[:7]
+            buy_in = float(t["buy_in"] or 0)
+            prize = float(e["prize_money"] or 0)
+            monthly[key]["profit"] += round(prize - buy_in, 2)
+            monthly[key]["tournaments"] += 1
+            monthly[key]["invested"] += buy_in
 
     return {
         "total_entered": len(entries),
@@ -90,6 +102,65 @@ def get_tournament_stats(current_user: dict = Depends(get_current_user)):
         "total_winnings": round(total_winnings, 2),
         "tournament_profit": round(total_winnings - total_invested, 2),
         "itm_rate": round(itm / len(entries) * 100, 1),
+        "monthly": [{"month": k, **v} for k, v in sorted(monthly.items())],
+    }
+
+
+@router.get("/combined")
+def get_combined(current_user: dict = Depends(get_current_user)):
+    """Gesamtstatistik: Cash Games + Turniere kombiniert."""
+    uid = int(current_user["id"])
+
+    # Cash Games
+    sessions = [r for r in sheets.all_rows("poker_sessions") if int(r["user_id"]) == uid]
+    cash_profit = sum(float(s["cash_out"]) - float(s["buy_in"]) for s in sessions)
+    cash_invested = sum(float(s["buy_in"]) for s in sessions)
+    cash_hours = sum(int(s["duration_minutes"]) for s in sessions if s["duration_minutes"]) / 60
+
+    # Turniere
+    all_entries = sheets.all_rows("poker_entries")
+    tournaments = {int(t["id"]): t for t in sheets.all_rows("poker_tournaments")}
+    entries = [e for e in all_entries
+               if int(e["user_id"]) == uid and int(e["tournament_id"]) in tournaments]
+    t_invested = sum(float(tournaments[int(e["tournament_id"])]["buy_in"] or 0) for e in entries)
+    t_winnings = sum(float(e["prize_money"] or 0) for e in entries)
+    t_profit = t_winnings - t_invested
+
+    total_profit = cash_profit + t_profit
+    total_invested = cash_invested + t_invested
+
+    # Kombiniertes Monatsdiagramm
+    monthly = defaultdict(lambda: {"profit": 0, "cash_profit": 0, "tournament_profit": 0})
+
+    for s in sessions:
+        key = s["date"][:7]
+        p = float(s["cash_out"]) - float(s["buy_in"])
+        monthly[key]["cash_profit"] += round(p, 2)
+        monthly[key]["profit"] += round(p, 2)
+
+    for e in entries:
+        t = tournaments[int(e["tournament_id"])]
+        date = t.get("start_date", "")
+        if date:
+            key = date[:7]
+            buy_in = float(t["buy_in"] or 0)
+            prize = float(e["prize_money"] or 0)
+            p = round(prize - buy_in, 2)
+            monthly[key]["tournament_profit"] += p
+            monthly[key]["profit"] += p
+
+    return {
+        "total_profit": round(total_profit, 2),
+        "cash_profit": round(cash_profit, 2),
+        "tournament_profit": round(t_profit, 2),
+        "total_invested": round(total_invested, 2),
+        "cash_invested": round(cash_invested, 2),
+        "tournament_invested": round(t_invested, 2),
+        "roi": round(total_profit / total_invested * 100, 1) if total_invested else 0,
+        "total_sessions": len(sessions),
+        "total_tournaments": len(entries),
+        "cash_hours": round(cash_hours, 1),
+        "monthly": [{"month": k, **v} for k, v in sorted(monthly.items())],
     }
 
 
@@ -99,7 +170,6 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
     all_tournaments = {int(t["id"]): t for t in sheets.all_rows("poker_tournaments")}
     all_users = {int(u["id"]): u["name"] for u in sheets.all_rows("poker_users")}
 
-    # Nur Entries mit noch existierendem Turnier
     valid_entries = [e for e in all_entries if int(e["tournament_id"]) in all_tournaments]
 
     by_tournament = defaultdict(list)
