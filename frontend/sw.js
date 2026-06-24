@@ -1,4 +1,4 @@
-const CACHE = 'cz-poker-v3';
+const CACHE = 'cz-poker-v4';
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.add('/')));
@@ -24,8 +24,12 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Statische Assets: Cache first, dann Netzwerk
+  // Statische Assets: Netzwerk first, dann Cache als Fallback
   e.respondWith(
-    caches.match(e.request).then(response => response || fetch(e.request))
+    fetch(e.request).then(response => {
+      const clone = response.clone();
+      caches.open(CACHE).then(c => c.put(e.request, clone));
+      return response;
+    }).catch(() => caches.match(e.request))
   );
 });
