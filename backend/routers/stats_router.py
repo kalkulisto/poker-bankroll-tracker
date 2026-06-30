@@ -196,8 +196,9 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
         "tournaments": 0, "itm": 0, "best_position": None,
         "final_tables": 0, "top3": 0, "top10pct": 0,
     })
+    # Chronologische Ergebnisse pro User fuer Form-Indikator
+    user_results = defaultdict(list)
 
-    # Fuer "Groesster Einzelgewinn" Badge: globales Maximum ueber alle shared Entries
     biggest_win_holder = None
     biggest_win_amount = 0.0
     biggest_win_tournament = None
@@ -209,6 +210,7 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
             continue
         buy_in = float(t["buy_in"] or 0)
         field_size = int(t["field_size"]) if t.get("field_size") else None
+        t_date = t.get("start_date", "") or ""
         players = []
         for e in entries:
             uid = int(e["user_id"])
@@ -221,6 +223,7 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
             user_stats[uid]["total_invested"] += buy_in
             user_stats[uid]["total_winnings"] += prize
             user_stats[uid]["total_profit"] += profit
+            user_results[uid].append({"date": t_date, "itm": prize > 0, "profit": round(profit, 2)})
             if prize > 0:
                 user_stats[uid]["itm"] += 1
             if pos:
@@ -263,6 +266,10 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
             badges.append({"key": "biggest_win", "icon": "&#128181;", "label": "Größter Einzelgewinn", "count": 1,
                             "detail": f"+${round(biggest_win_amount)} bei {biggest_win_tournament}"})
 
+        # Form: letzte 8 Ergebnisse, chronologisch sortiert (aelteste zuerst)
+        results_sorted = sorted(user_results[uid], key=lambda r: r["date"])
+        form = results_sorted[-8:]
+
         leaderboard.append({
             "user_id": uid, "name": all_users.get(uid, "?"),
             "tournaments": stats["tournaments"],
@@ -273,6 +280,7 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
             "best_position": stats["best_position"],
             "final_tables": stats["final_tables"], "top3": stats["top3"], "top10pct": stats["top10pct"],
             "badges": badges,
+            "form": form,
         })
     leaderboard.sort(key=lambda x: x["total_profit"], reverse=True)
 
@@ -288,7 +296,6 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
         "gap": round(leaderboard[0]["total_profit"] - leaderboard[1]["total_profit"], 2) if len(leaderboard) >= 2 else 0,
     }
 
-    # Head-to-Head ITM Score, z.B. "5:3"
     h2h_itm = None
     if len(leaderboard) >= 2:
         a, b = leaderboard[0], leaderboard[1]
