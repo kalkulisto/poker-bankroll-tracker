@@ -228,17 +228,17 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
       </div>
     </div>
     <nav>
-      <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
+      <button class="nav-btn" onclick="showPage('dashboard')">Dashboard</button>
       <button class="nav-btn" onclick="showPage('sessions')">Sessions</button>
       <button class="nav-btn" onclick="showPage('tournaments')">Turniere</button>
-      <button class="nav-btn" onclick="showPage('rangliste')">Rangliste</button>
+      <button class="nav-btn active" onclick="showPage('rangliste')">Rangliste</button>
       <button class="nav-btn" onclick="showPage('stats')">Turnier-Stats</button>
       <button class="nav-btn" onclick="showPage('gesamt')">Gesamt</button>
     </nav>
   </header>
   <main>
 
-    <div class="page active" id="page-dashboard">
+    <div class="page" id="page-dashboard">
       <div class="stat-grid">
         <div class="stat-card"><div class="stat-label">Gesamtprofit</div><div class="stat-value neutral" id="s-total-profit">&#8212;</div></div>
         <div class="stat-card"><div class="stat-label">Sessions</div><div class="stat-value neutral" id="s-sessions">&#8212;</div></div>
@@ -301,7 +301,7 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
       <div id="tournaments-empty" class="empty-state" style="display:none"><div class="empty-state-icon">&#127942;</div><p>Keine Turniere.</p></div>
     </div>
 
-    <div class="page" id="page-rangliste">
+    <div class="page active" id="page-rangliste">
       <div class="section-title" style="margin-bottom:1rem">&#127942; Head-to-Head Rangliste</div>
       <div id="rangliste-empty" class="empty-state" style="display:none">
         <div class="empty-state-icon">&#9977;</div>
@@ -555,6 +555,7 @@ function enterApp(){
   document.getElementById('header-username').textContent=currentUser.name;
   if(currentUser.is_admin)document.getElementById('admin-section').style.display='block';
   loadAll();
+  loadRangliste();
   if(currentUser.pin_changed===false){
     setTimeout(()=>openModal('pin-change-modal'),500);
   }
