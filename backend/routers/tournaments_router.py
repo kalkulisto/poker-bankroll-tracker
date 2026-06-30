@@ -17,6 +17,7 @@ class TournamentCreate(BaseModel):
     buy_in: Optional[float] = None
     game_type: str = "NL Hold'em"
     is_global: bool = False
+    field_size: Optional[int] = None
 
 
 class EntryUpsert(BaseModel):
@@ -38,6 +39,7 @@ def t_dict(t: dict, entry: dict | None = None) -> dict:
         "buy_in": float(t["buy_in"]) if t["buy_in"] else None,
         "game_type": t["game_type"],
         "is_global": str(t["is_global"]).lower() == "true",
+        "field_size": int(t["field_size"]) if t.get("field_size") else None,
         "created_by_name": creator["name"] if creator else "System",
         "entry": {
             "id": int(entry["id"]),
@@ -53,7 +55,6 @@ def get_tournaments(current_user: dict = Depends(get_current_user)):
     uid = int(current_user["id"])
     tournaments = sheets.all_rows("poker_tournaments")
     entries = sheets.all_rows("poker_entries")
-    tournament_ids = {int(t["id"]) for t in tournaments}
 
     result = []
     for t in tournaments:
@@ -78,6 +79,7 @@ def create_tournament(req: TournamentCreate, current_user: dict = Depends(get_cu
         "end_date": str(req.end_date) if req.end_date else "",
         "buy_in": req.buy_in or "", "game_type": req.game_type,
         "is_global": str(req.is_global), "created_by": int(current_user["id"]),
+        "field_size": req.field_size or "",
         "created_at": datetime.utcnow().isoformat()
     }
     sheets.insert_row("poker_tournaments", data)
@@ -97,7 +99,8 @@ def update_tournament(tournament_id: int, req: TournamentCreate, current_user: d
         "name": req.name, "series": req.series or "", "location": req.location or "",
         "start_date": str(req.start_date) if req.start_date else "",
         "end_date": str(req.end_date) if req.end_date else "",
-        "buy_in": req.buy_in or "", "game_type": req.game_type, "is_global": str(req.is_global)
+        "buy_in": req.buy_in or "", "game_type": req.game_type, "is_global": str(req.is_global),
+        "field_size": req.field_size or "",
     }
     sheets.update_row("poker_tournaments", tournament_id, data)
     return t_dict({**t, **data})
@@ -111,7 +114,6 @@ def delete_tournament(tournament_id: int, current_user: dict = Depends(get_curre
     if int(t["created_by"]) != int(current_user["id"]) and str(current_user.get("is_admin", "")).lower() != "true":
         raise HTTPException(status_code=403, detail="Keine Berechtigung")
     sheets.delete_row("poker_tournaments", tournament_id)
-    # Alle verwaisten Entries mitlöschen (rueckwaerts iterieren da Zeilen verschoben werden)
     entries = sheets.all_rows("poker_entries")
     for e in reversed([e for e in entries if int(e["tournament_id"]) == tournament_id]):
         sheets.delete_row("poker_entries", int(e["id"]))

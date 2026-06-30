@@ -13,7 +13,7 @@ SCOPES = [
 SHEET_SCHEMAS = {
     "poker_users":       ["id", "name", "pin_hash", "is_admin", "pin_changed", "created_at"],
     "poker_sessions":    ["id", "user_id", "date", "location", "game_type", "stakes", "buy_in", "cash_out", "duration_minutes", "notes", "created_at"],
-    "poker_tournaments": ["id", "name", "series", "location", "start_date", "end_date", "buy_in", "game_type", "is_global", "created_by", "created_at"],
+    "poker_tournaments": ["id", "name", "series", "location", "start_date", "end_date", "buy_in", "game_type", "is_global", "created_by", "field_size", "created_at"],
     "poker_entries":     ["id", "user_id", "tournament_id", "result_position", "prize_money", "notes", "created_at"],
 }
 
@@ -78,7 +78,6 @@ def next_id(sheet_name: str) -> int:
 
 def insert_row(sheet_name: str, data: dict) -> dict:
     ws = get_sheet(sheet_name)
-    # Echte Header aus dem Sheet verwenden
     headers = ws.row_values(1)
     row = [str(data.get(h, "")) for h in headers]
     ws.append_row(row)
@@ -87,7 +86,6 @@ def insert_row(sheet_name: str, data: dict) -> dict:
 
 def update_row(sheet_name: str, row_id: int, data: dict):
     ws = get_sheet(sheet_name)
-    # Echte Header aus dem Sheet verwenden
     headers = ws.row_values(1)
     records = ws.get_all_records()
     for i, r in enumerate(records):

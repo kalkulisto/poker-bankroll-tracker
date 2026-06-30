@@ -147,7 +147,6 @@ def get_combined(current_user: dict = Depends(get_current_user)):
 
 @router.get("/timeline")
 def get_timeline(current_user: dict = Depends(get_current_user)):
-    """Chronologische Events fuer den kumulativen Zeitverlauf-Chart."""
     uid = int(current_user["id"])
     sessions = [r for r in sheets.all_rows("poker_sessions") if int(r["user_id"]) == uid]
     all_entries = sheets.all_rows("poker_entries")
@@ -156,15 +155,12 @@ def get_timeline(current_user: dict = Depends(get_current_user)):
                if int(e["user_id"]) == uid and int(e["tournament_id"]) in tournaments]
 
     events = []
-
     for s in sessions:
         events.append({
-            "date": s["date"],
-            "type": "cash",
+            "date": s["date"], "type": "cash",
             "label": s.get("location") or "Cash",
             "profit": round(float(s["cash_out"]) - float(s["buy_in"]), 2),
         })
-
     for e in entries:
         t = tournaments[int(e["tournament_id"])]
         date = t.get("start_date", "")
@@ -173,12 +169,9 @@ def get_timeline(current_user: dict = Depends(get_current_user)):
         buy_in = float(t["buy_in"] or 0)
         prize = float(e["prize_money"] or 0)
         events.append({
-            "date": date,
-            "type": "tournament",
-            "label": t["name"],
+            "date": date, "type": "tournament", "label": t["name"],
             "profit": round(prize - buy_in, 2),
         })
-
     events.sort(key=lambda e: e["date"])
     return events
 
@@ -201,7 +194,13 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
     user_stats = defaultdict(lambda: {
         "total_profit": 0.0, "total_invested": 0.0, "total_winnings": 0.0,
         "tournaments": 0, "itm": 0, "best_position": None,
+        "final_tables": 0, "top3": 0, "top10pct": 0,
     })
+
+    # Fuer "Groesster Einzelgewinn" Badge: globales Maximum ueber alle shared Entries
+    biggest_win_holder = None
+    biggest_win_amount = 0.0
+    biggest_win_tournament = None
 
     tournaments_detail = []
     for tid, entries in sorted(shared.items(), key=lambda x: all_tournaments.get(x[0], {}).get("start_date", "") or "", reverse=True):
@@ -209,6 +208,7 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
         if not t:
             continue
         buy_in = float(t["buy_in"] or 0)
+        field_size = int(t["field_size"]) if t.get("field_size") else None
         players = []
         for e in entries:
             uid = int(e["user_id"])
@@ -223,26 +223,56 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
             user_stats[uid]["total_profit"] += profit
             if prize > 0:
                 user_stats[uid]["itm"] += 1
-            if pos and (user_stats[uid]["best_position"] is None or pos < user_stats[uid]["best_position"]):
-                user_stats[uid]["best_position"] = pos
+            if pos:
+                if user_stats[uid]["best_position"] is None or pos < user_stats[uid]["best_position"]:
+                    user_stats[uid]["best_position"] = pos
+                if pos <= 9:
+                    user_stats[uid]["final_tables"] += 1
+                if pos <= 3:
+                    user_stats[uid]["top3"] += 1
+                if field_size and pos <= max(1, round(field_size * 0.1)):
+                    user_stats[uid]["top10pct"] += 1
+
+            if profit > biggest_win_amount:
+                biggest_win_amount = profit
+                biggest_win_holder = uid
+                biggest_win_tournament = t["name"]
 
         players.sort(key=lambda p: (p["position"] or 9999))
         tournaments_detail.append({
             "id": tid, "name": t["name"], "series": t["series"] or None,
-            "start_date": t["start_date"] or None, "buy_in": buy_in, "players": players,
+            "start_date": t["start_date"] or None, "buy_in": buy_in,
+            "field_size": field_size, "players": players,
         })
 
     leaderboard = []
     for uid, stats in user_stats.items():
         itm_rate = round(stats["itm"] / stats["tournaments"] * 100, 1) if stats["tournaments"] else 0
         roi = round(stats["total_profit"] / stats["total_invested"] * 100, 1) if stats["total_invested"] else 0
+
+        badges = []
+        if stats["itm"] > 0:
+            badges.append({"key": "itm", "icon": "&#128176;", "label": "ITM", "count": stats["itm"]})
+        if stats["final_tables"] > 0:
+            badges.append({"key": "final_table", "icon": "&#127942;", "label": "Final Table", "count": stats["final_tables"]})
+        if stats["top3"] > 0:
+            badges.append({"key": "top3", "icon": "&#129352;", "label": "Top 3", "count": stats["top3"]})
+        if stats["top10pct"] > 0:
+            badges.append({"key": "top10pct", "icon": "&#11088;", "label": "Top 10%", "count": stats["top10pct"]})
+        if biggest_win_holder == uid and biggest_win_amount > 0:
+            badges.append({"key": "biggest_win", "icon": "&#128181;", "label": "Größter Einzelgewinn", "count": 1,
+                            "detail": f"+${round(biggest_win_amount)} bei {biggest_win_tournament}"})
+
         leaderboard.append({
             "user_id": uid, "name": all_users.get(uid, "?"),
             "tournaments": stats["tournaments"],
             "total_invested": round(stats["total_invested"], 2),
             "total_winnings": round(stats["total_winnings"], 2),
             "total_profit": round(stats["total_profit"], 2),
-            "roi": roi, "itm_rate": itm_rate, "best_position": stats["best_position"],
+            "roi": roi, "itm_rate": itm_rate, "itm": stats["itm"],
+            "best_position": stats["best_position"],
+            "final_tables": stats["final_tables"], "top3": stats["top3"], "top10pct": stats["top10pct"],
+            "badges": badges,
         })
     leaderboard.sort(key=lambda x: x["total_profit"], reverse=True)
 
@@ -258,4 +288,15 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
         "gap": round(leaderboard[0]["total_profit"] - leaderboard[1]["total_profit"], 2) if len(leaderboard) >= 2 else 0,
     }
 
-    return {"leaderboard": leaderboard, "tournaments": tournaments_detail, "challenge": challenge}
+    # Head-to-Head ITM Score, z.B. "5:3"
+    h2h_itm = None
+    if len(leaderboard) >= 2:
+        a, b = leaderboard[0], leaderboard[1]
+        h2h_itm = {"a_name": a["name"], "a_itm": a["itm"], "b_name": b["name"], "b_itm": b["itm"]}
+
+    return {
+        "leaderboard": leaderboard,
+        "tournaments": tournaments_detail,
+        "challenge": challenge,
+        "h2h_itm": h2h_itm,
+    }
