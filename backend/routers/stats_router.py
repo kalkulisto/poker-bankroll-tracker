@@ -246,4 +246,16 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
         })
     leaderboard.sort(key=lambda x: x["total_profit"], reverse=True)
 
-    return {"leaderboard": leaderboard, "tournaments": tournaments_detail}
+    CHALLENGE_TARGET = 100
+    shared_count = len(shared)
+    leader = leaderboard[0] if leaderboard else None
+    challenge = {
+        "target": CHALLENGE_TARGET,
+        "played": shared_count,
+        "remaining": max(0, CHALLENGE_TARGET - shared_count),
+        "progress_pct": round(min(100, shared_count / CHALLENGE_TARGET * 100), 1),
+        "leader_name": leader["name"] if leader else None,
+        "gap": round(leaderboard[0]["total_profit"] - leaderboard[1]["total_profit"], 2) if len(leaderboard) >= 2 else 0,
+    }
+
+    return {"leaderboard": leaderboard, "tournaments": tournaments_detail, "challenge": challenge}
