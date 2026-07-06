@@ -229,7 +229,7 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
     </div>
     <nav>
       <button class="nav-btn" onclick="showPage('dashboard')">Dashboard</button>
-      <button class="nav-btn" onclick="showPage('sessions')">Sessions</button>
+      <button class="nav-btn" onclick="showPage('sessions')">Cash Games</button>
       <button class="nav-btn" onclick="showPage('tournaments')">Turniere</button>
       <button class="nav-btn active" onclick="showPage('rangliste')">Rangliste</button>
       <button class="nav-btn" onclick="showPage('stats')">Turnier-Stats</button>
@@ -255,7 +255,7 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
       </div>
       <div class="panel">
         <div class="section-header">
-          <div class="section-title">Letzte Sessions</div>
+          <div class="section-title">Letzte Cash Games</div>
           <button class="btn btn-ghost btn-sm" onclick="showPage('sessions')">Alle &#8594;</button>
         </div>
         <div class="table-wrap"><table class="data-table">
@@ -267,7 +267,7 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
 
     <div class="page" id="page-sessions">
       <div class="action-row">
-        <div class="section-title">Cash Game Sessions</div>
+        <div class="section-title">Cash Games</div>
         <button class="btn btn-primary" onclick="openSessionModal()">+ Session</button>
       </div>
       <div class="panel" style="padding:.5rem">
@@ -283,7 +283,7 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
           <thead><tr><th>Datum</th><th>Ort</th><th>Spiel</th><th>Stakes</th><th>Buy-in</th><th>Cash-out</th><th>Profit</th><th>Dauer</th><th></th></tr></thead>
           <tbody id="session-table"></tbody>
         </table></div>
-        <div id="sessions-empty" class="empty-state" style="display:none"><div class="empty-state-icon">&#127183;</div><p>Noch keine Sessions.</p></div>
+        <div id="sessions-empty" class="empty-state" style="display:none"><div class="empty-state-icon">&#127183;</div><p>Noch keine Cash Games.</p></div>
       </div>
     </div>
 
@@ -413,7 +413,7 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
 <!-- MODALS -->
 <div class="modal-overlay" id="session-modal">
   <div class="modal">
-    <div class="modal-title"><span id="session-modal-title">Session erfassen</span><button class="modal-close" onclick="closeModal('session-modal')">&#10005;</button></div>
+    <div class="modal-title"><span id="session-modal-title">Cash Game erfassen</span><button class="modal-close" onclick="closeModal('session-modal')">&#10005;</button></div>
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Datum</label><input class="form-input" type="date" id="s-date"></div>
       <div class="form-group"><label class="form-label">Ort / Casino</label><input class="form-input" id="s-location" placeholder="z.B. Bellagio, WSOP"></div>
@@ -644,7 +644,7 @@ function renderRecentSessions(){
 
 function openSessionModal(id=null){
   editingSessionId=id;
-  document.getElementById('session-modal-title').textContent=id?'Session bearbeiten':'Session erfassen';
+  document.getElementById('session-modal-title').textContent=id?'Cash Game bearbeiten':'Cash Game erfassen';
   if(id){const s=allSessions.find(x=>x.id===id);document.getElementById('s-date').value=s.date;document.getElementById('s-location').value=s.location||'';document.getElementById('s-game').value=s.game_type;document.getElementById('s-stakes').value=s.stakes||'';document.getElementById('s-buyin').value=s.buy_in;document.getElementById('s-cashout').value=s.cash_out;document.getElementById('s-duration').value=s.duration_minutes||'';document.getElementById('s-notes').value=s.notes||'';}
   else{document.getElementById('s-date').value=new Date().toISOString().split('T')[0];['s-location','s-buyin','s-cashout','s-duration','s-notes'].forEach(i=>document.getElementById(i).value='');}
   openModal('session-modal');
@@ -656,7 +656,7 @@ async function saveSession(){
   catch(e){alert('Fehler: '+(e.detail||JSON.stringify(e)));}
 }
 
-async function deleteSession(id){if(!confirm('Session l\u00f6schen?'))return;await api(`/sessions/${id}`,'DELETE');await loadSessions();renderDashboard();}
+async function deleteSession(id){if(!confirm('Cash Game l\u00f6schen?'))return;await api(`/sessions/${id}`,'DELETE');await loadSessions();renderDashboard();}
 
 // ── DASHBOARD CHART ──
 function renderDashboard(){
