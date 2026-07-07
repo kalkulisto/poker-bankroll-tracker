@@ -508,7 +508,7 @@ let editingSessionId=null,editingTournamentId=null,entryTournamentId=null;
 let tournamentFilter='upcoming';
 
 // ── AUTH ──
-async function fetchUsers(){
+async async function fetchUsers(){
   const res=await fetch('/auth/users');
   const users=await res.json();
   const avatars=['\u2660','\u2665','\u2666','\u2663','\u2605','\u25c6'];
