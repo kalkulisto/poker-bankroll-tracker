@@ -460,6 +460,10 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Platzierung</label><input class="form-input" type="number" id="e-position" min="1" placeholder="z.B. 47"></div>
       <div class="form-group"><label class="form-label">Preisgeld ($)</label><input class="form-input" type="number" id="e-prize" min="0" step="1" value="0"></div>
+      <div class="form-group"><label class="form-label">Reentries</label><input class="form-input" type="number" id="e-reentries" min="0" step="1" value="0" placeholder="0 = kein Reentry"></div>
+      <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:.2rem">
+        <span id="e-total-cost" style="font-size:.8rem;color:var(--muted)"></span>
+      </div>
       <div class="form-group full"><label class="form-label">Notizen</label><textarea class="form-textarea" id="e-notes" placeholder="z.B. Day 2 erreicht, busted KK vs AA..."></textarea></div>
     </div>
     <div class="modal-footer">
@@ -737,7 +741,7 @@ function renderTournaments(){
     const d=t.start_date?new Date(t.start_date):null;
     const day=d?d.getUTCDate():'?',month=d?MONTHS[d.getUTCMonth()]:'';
     const badge=t.is_global?'<span class="t-badge global-badge">Global</span>':'<span class="t-badge own-badge">Eigenes</span>';
-    const entry=t.entry?`<div class="entry-result ${t.entry.prize_money>0?'won':''}">&#10003; Angemeldet${t.entry.result_position?` \u00b7 Platz ${t.entry.result_position}`:''}${t.entry.prize_money>0?` \u00b7 $${t.entry.prize_money}`:''}</div>`:'';
+    const entry=t.entry?`<div class="entry-result ${t.entry.prize_money>0?'won':''}">&#10003; Angemeldet${t.entry.result_position?` \u00b7 Platz ${t.entry.result_position}`:''}${t.entry.prize_money>0?` \u00b7 $${t.entry.prize_money}`:''}${t.entry.reentries>0?` \u00b7 ${t.entry.reentries}x Reentry`:''}</div>`:'');
     const canEdit=t.created_by_name===currentUser.name||currentUser.is_admin;
     const editBtns=canEdit?`<button class="btn btn-ghost btn-sm" onclick="openTournamentModal(${t.id})">&#9998;</button><button class="btn btn-danger btn-sm" onclick="deleteTournament(${t.id})">&#10005;</button>`:'';
     return`<div class="tournament-item ${t.is_global?'global':'personal'}">
@@ -772,13 +776,33 @@ async function saveTournament(){
 
 async function deleteTournament(id){if(!confirm('Turnier l\u00f6schen?'))return;await api(`/tournaments/${id}`,'DELETE');await loadTournaments();}
 
+function updateTotalCost(){
+  const t=allTournaments.find(x=>x.id===entryTournamentId);
+  if(!t||!t.buy_in)return;
+  const re=parseInt(document.getElementById('e-reentries').value)||0;
+  const total=t.buy_in*(re+1);
+  document.getElementById('e-total-cost').textContent=`Gesamt Buy-in: $${total}`;
+}
+
 function openEntryModal(tid){
   entryTournamentId=tid;
   const t=allTournaments.find(x=>x.id===tid);
   document.getElementById('entry-modal-title').textContent=t.name;
   const rb=document.getElementById('entry-remove-btn');
-  if(t.entry){document.getElementById('e-position').value=t.entry.result_position||'';document.getElementById('e-prize').value=t.entry.prize_money||0;document.getElementById('e-notes').value=t.entry.notes||'';rb.style.display='block';}
-  else{document.getElementById('e-position').value='';document.getElementById('e-prize').value='0';document.getElementById('e-notes').value='';rb.style.display='none';}
+  if(t.entry){
+    document.getElementById('e-position').value=t.entry.result_position||'';
+    document.getElementById('e-prize').value=t.entry.prize_money||0;
+    document.getElementById('e-reentries').value=t.entry.reentries||0;
+    document.getElementById('e-notes').value=t.entry.notes||'';
+    rb.style.display='block';
+  }else{
+    document.getElementById('e-position').value='';
+    document.getElementById('e-prize').value='0';
+    document.getElementById('e-reentries').value='0';
+    document.getElementById('e-notes').value='';
+    rb.style.display='none';
+  }
+  setTimeout(updateTotalCost,50);
   openModal('entry-modal');
 }
 

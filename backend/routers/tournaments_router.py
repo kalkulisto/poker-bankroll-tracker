@@ -23,6 +23,7 @@ class TournamentCreate(BaseModel):
 class EntryUpsert(BaseModel):
     result_position: Optional[int] = None
     prize_money: float = 0.0
+    reentries: int = 0
     notes: Optional[str] = None
 
 
@@ -45,6 +46,7 @@ def t_dict(t: dict, entry: dict | None = None) -> dict:
             "id": int(entry["id"]),
             "result_position": int(entry["result_position"]) if entry["result_position"] else None,
             "prize_money": float(entry["prize_money"]) if entry["prize_money"] else 0.0,
+            "reentries": int(entry["reentries"]) if entry.get("reentries") else 0,
             "notes": entry["notes"] or None,
         } if entry else None,
     }
@@ -132,18 +134,23 @@ def upsert_entry(tournament_id: int, req: EntryUpsert, current_user: dict = Depe
     if existing:
         sheets.update_row("poker_entries", int(existing["id"]), {
             "result_position": req.result_position or "",
-            "prize_money": req.prize_money, "notes": req.notes or ""
+            "prize_money": req.prize_money,
+            "reentries": req.reentries,
+            "notes": req.notes or ""
         })
-        return {"id": int(existing["id"]), "result_position": req.result_position, "prize_money": req.prize_money}
+        return {"id": int(existing["id"]), "result_position": req.result_position,
+                "prize_money": req.prize_money, "reentries": req.reentries}
     else:
         eid = sheets.next_id("poker_entries")
         data = {
             "id": eid, "user_id": uid, "tournament_id": tournament_id,
             "result_position": req.result_position or "", "prize_money": req.prize_money,
-            "notes": req.notes or "", "created_at": datetime.utcnow().isoformat()
+            "reentries": req.reentries, "notes": req.notes or "",
+            "created_at": datetime.utcnow().isoformat()
         }
         sheets.insert_row("poker_entries", data)
-        return {"id": eid, "result_position": req.result_position, "prize_money": req.prize_money}
+        return {"id": eid, "result_position": req.result_position,
+                "prize_money": req.prize_money, "reentries": req.reentries}
 
 
 @router.delete("/{tournament_id}/entry")

@@ -6,6 +6,11 @@ from auth import get_current_user
 router = APIRouter(prefix="/stats", tags=["stats"])
 
 
+def effective_buyin(buy_in: float, reentries: int) -> float:
+    """Tatsaechlich bezahlter Buy-in inkl. Reentries."""
+    return buy_in * (reentries + 1)
+
+
 @router.get("/summary")
 def get_summary(current_user: dict = Depends(get_current_user)):
     uid = int(current_user["id"])
@@ -79,7 +84,10 @@ def get_tournament_stats(current_user: dict = Depends(get_current_user)):
         return {"total_entered": 0, "total_invested": 0, "total_winnings": 0,
                 "tournament_profit": 0, "itm_rate": 0, "monthly": []}
 
-    total_invested = sum(float(tournaments[int(e["tournament_id"])]["buy_in"] or 0) for e in entries)
+    total_invested = sum(
+        effective_buyin(float(tournaments[int(e["tournament_id"])]["buy_in"] or 0),
+                        int(e.get("reentries") or 0))
+        for e in entries)
     total_winnings = sum(float(e["prize_money"] or 0) for e in entries)
     itm = len([e for e in entries if float(e["prize_money"] or 0) > 0])
 
@@ -89,7 +97,7 @@ def get_tournament_stats(current_user: dict = Depends(get_current_user)):
         date = t.get("start_date", "")
         if date:
             key = date[:7]
-            buy_in = float(t["buy_in"] or 0)
+            buy_in = effective_buyin(float(t["buy_in"] or 0), int(e.get("reentries") or 0))
             prize = float(e["prize_money"] or 0)
             monthly[key]["profit"] += round(prize - buy_in, 2)
             monthly[key]["tournaments"] += 1
@@ -131,7 +139,7 @@ def get_combined(current_user: dict = Depends(get_current_user)):
         date = t.get("start_date", "")
         if date:
             key = date[:7]
-            buy_in = float(t["buy_in"] or 0)
+            buy_in = effective_buyin(float(t["buy_in"] or 0), int(e.get("reentries") or 0))
             prize = float(e["prize_money"] or 0)
             monthly[key]["tournament_profit"] += round(prize - buy_in, 2)
             monthly[key]["tournament_invested"] += buy_in
@@ -166,7 +174,7 @@ def get_timeline(current_user: dict = Depends(get_current_user)):
         date = t.get("start_date", "")
         if not date:
             continue
-        buy_in = float(t["buy_in"] or 0)
+        buy_in = effective_buyin(float(t["buy_in"] or 0), int(e.get("reentries") or 0))
         prize = float(e["prize_money"] or 0)
         events.append({
             "date": date, "type": "tournament", "label": t["name"],
@@ -196,7 +204,6 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
         "tournaments": 0, "itm": 0, "best_position": None,
         "final_tables": 0, "top3": 0, "top10pct": 0,
     })
-    # Chronologische Ergebnisse pro User fuer Form-Indikator
     user_results = defaultdict(list)
 
     biggest_win_holder = None
@@ -208,7 +215,7 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
         t = all_tournaments.get(tid)
         if not t:
             continue
-        buy_in = float(t["buy_in"] or 0)
+        base_buy_in = float(t["buy_in"] or 0)
         field_size = int(t["field_size"]) if t.get("field_size") else None
         t_date = t.get("start_date", "") or ""
         players = []
@@ -216,9 +223,14 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
             uid = int(e["user_id"])
             prize = float(e["prize_money"] or 0)
             pos = int(e["result_position"]) if e["result_position"] else None
+            reentries = int(e.get("reentries") or 0)
+            buy_in = effective_buyin(base_buy_in, reentries)
             profit = prize - buy_in
-            players.append({"user_id": uid, "name": all_users.get(uid, "?"),
-                             "position": pos, "prize_money": prize, "profit": round(profit, 2)})
+            players.append({
+                "user_id": uid, "name": all_users.get(uid, "?"),
+                "position": pos, "prize_money": prize, "profit": round(profit, 2),
+                "reentries": reentries,
+            })
             user_stats[uid]["tournaments"] += 1
             user_stats[uid]["total_invested"] += buy_in
             user_stats[uid]["total_winnings"] += prize
@@ -235,7 +247,6 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
                     user_stats[uid]["top3"] += 1
                 if field_size and pos <= max(1, round(field_size * 0.1)):
                     user_stats[uid]["top10pct"] += 1
-
             if profit > biggest_win_amount:
                 biggest_win_amount = profit
                 biggest_win_holder = uid
@@ -244,7 +255,7 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
         players.sort(key=lambda p: (p["position"] or 9999))
         tournaments_detail.append({
             "id": tid, "name": t["name"], "series": t["series"] or None,
-            "start_date": t["start_date"] or None, "buy_in": buy_in,
+            "start_date": t["start_date"] or None, "buy_in": base_buy_in,
             "field_size": field_size, "players": players,
         })
 
@@ -263,10 +274,9 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
         if stats["top10pct"] > 0:
             badges.append({"key": "top10pct", "icon": "&#11088;", "label": "Top 10%", "count": stats["top10pct"]})
         if biggest_win_holder == uid and biggest_win_amount > 0:
-            badges.append({"key": "biggest_win", "icon": "&#128181;", "label": "Größter Einzelgewinn", "count": 1,
+            badges.append({"key": "biggest_win", "icon": "&#128181;", "label": "Gr\u00f6\u00dfter Einzelgewinn", "count": 1,
                             "detail": f"+${round(biggest_win_amount)} bei {biggest_win_tournament}"})
 
-        # Form: letzte 8 Ergebnisse, chronologisch sortiert (aelteste zuerst)
         results_sorted = sorted(user_results[uid], key=lambda r: r["date"])
         form = results_sorted[-8:]
 
