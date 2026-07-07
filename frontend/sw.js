@@ -1,4 +1,4 @@
-const CACHE = 'cz-poker-v4';
+const CACHE = 'cz-poker-v5';
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.add('/')));
@@ -14,8 +14,6 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-
-  // API-Calls immer live holen, nie cachen
   if (url.pathname.startsWith('/auth/') ||
       url.pathname.startsWith('/sessions') ||
       url.pathname.startsWith('/tournaments') ||
@@ -23,8 +21,6 @@ self.addEventListener('fetch', e => {
     e.respondWith(fetch(e.request));
     return;
   }
-
-  // Statische Assets: Netzwerk first, dann Cache als Fallback
   e.respondWith(
     fetch(e.request).then(response => {
       const clone = response.clone();
