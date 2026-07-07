@@ -1,0 +1,5 @@
+Turnier: Spieltag 1 buy_in=10.0
+  XXzwiebackXX: pos=498 prize=0.0 profit=-10.0 reentries=0
+  ElChicoDe: pos=None prize=0.0 profit=-10.0 reentries=0
+
+Turnier Spieltag 1: entry reentries=0

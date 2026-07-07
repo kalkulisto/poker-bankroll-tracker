@@ -1,0 +1,12 @@
+e-reentries field found:
+label><input class="form-input" type="number" id="e-reentries" min="0" step="1" value="0" placeholder="0 = kein Reentry"></div>
+      <div class="form
+
+saveEntry:
+async function saveEntry(){
+  const body={result_position:parseInt(document.getElementById('e-position').value)||null,prize_money:parseFloat(document.getElementById('e-prize').value)||0,notes:document.getElementById('e-notes').value||null};
+  try{
+    await api(`/tournaments/${entryTournamentId}/entry`,'PUT',body);
+  }catch(e){
+    alert('Fehler beim Speichern: '+(e.detail||JSON.stringify(e)));
+  

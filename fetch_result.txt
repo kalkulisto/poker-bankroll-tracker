@@ -1,0 +1,4 @@
+size: 71470
+async async count: 1
+async function fetchUsers: True
+scripts found: 2
