@@ -18,6 +18,7 @@ class TournamentCreate(BaseModel):
     game_type: str = "NL Hold'em"
     is_global: bool = False
     field_size: Optional[int] = None
+    tournament_type: Optional[str] = "Live"  # Live / Online
 
 
 class EntryUpsert(BaseModel):
@@ -41,6 +42,7 @@ def t_dict(t: dict, entry: dict | None = None) -> dict:
         "game_type": t["game_type"],
         "is_global": str(t["is_global"]).lower() == "true",
         "field_size": int(t["field_size"]) if t.get("field_size") else None,
+        "tournament_type": t.get("tournament_type") or "Live",
         "created_by_name": creator["name"] if creator else "System",
         "entry": {
             "id": int(entry["id"]),
@@ -82,6 +84,7 @@ def create_tournament(req: TournamentCreate, current_user: dict = Depends(get_cu
         "buy_in": req.buy_in or "", "game_type": req.game_type,
         "is_global": str(req.is_global), "created_by": int(current_user["id"]),
         "field_size": req.field_size or "",
+        "tournament_type": req.tournament_type or "Live",
         "created_at": datetime.utcnow().isoformat()
     }
     sheets.insert_row("poker_tournaments", data)
@@ -103,6 +106,7 @@ def update_tournament(tournament_id: int, req: TournamentCreate, current_user: d
         "end_date": str(req.end_date) if req.end_date else "",
         "buy_in": req.buy_in or "", "game_type": req.game_type, "is_global": str(req.is_global),
         "field_size": req.field_size or "",
+        "tournament_type": req.tournament_type or "Live",
     }
     sheets.update_row("poker_tournaments", tournament_id, data)
     return t_dict({**t, **data})

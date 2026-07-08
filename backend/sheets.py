@@ -13,7 +13,7 @@ SCOPES = [
 SHEET_SCHEMAS = {
     "poker_users":       ["id", "name", "pin_hash", "is_admin", "pin_changed", "created_at"],
     "poker_sessions":    ["id", "user_id", "date", "location", "game_type", "stakes", "buy_in", "cash_out", "duration_minutes", "notes", "created_at"],
-    "poker_tournaments": ["id", "name", "series", "location", "start_date", "end_date", "buy_in", "game_type", "is_global", "created_by", "field_size", "created_at"],
+    "poker_tournaments": ["id", "name", "series", "location", "start_date", "end_date", "buy_in", "game_type", "is_global", "created_by", "field_size", "tournament_type", "created_at"],
     "poker_entries":     ["id", "user_id", "tournament_id", "result_position", "prize_money", "reentries", "notes", "created_at"],
 }
 

@@ -240,13 +240,14 @@ function renderTournaments(){
     const d=t.start_date?new Date(t.start_date):null;
     const day=d?d.getUTCDate():'?',month=d?MONTHS[d.getUTCMonth()]:'';
     const badge=t.is_global?'<span class="t-badge global-badge">Global</span>':'<span class="t-badge own-badge">Eigenes</span>';
+    const typeBadge=t.tournament_type==='Online'?'<span class="t-badge" style="background:#0d1a2a;color:#5b9bd5">Online</span>':'';
     const entry=t.entry?`<div class="entry-result ${t.entry.prize_money>0?'won':''}">&#10003; Angemeldet${t.entry.result_position?` \u00b7 Platz ${t.entry.result_position}`:''}${t.entry.prize_money>0?` \u00b7 $${t.entry.prize_money}`:''}${t.entry.reentries>0?` \u00b7 ${t.entry.reentries}x Reentry`:''}</div>`:'';
     const canEdit=t.created_by_name===currentUser.name||currentUser.is_admin;
     const editBtns=canEdit?`<button class="btn btn-ghost btn-sm" onclick="openTournamentModal(${t.id})">&#9998;</button><button class="btn btn-danger btn-sm" onclick="deleteTournament(${t.id})">&#10005;</button>`:'';
     return`<div class="tournament-item ${t.is_global?'global':'personal'}">
       <div class="t-date"><div class="t-date-day">${day}</div><div class="t-date-month">${month}</div></div>
       <div class="t-info">
-        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap"><span class="t-name">${t.name}</span>${badge}</div>
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap"><span class="t-name">${t.name}</span>${badge}${typeBadge}</div>
         <div class="t-meta">${t.series?`<span class="t-series">${t.series}</span> \u00b7 `:''}${t.location||''}${t.buy_in?` \u00b7 <span class="t-buyin">$${t.buy_in}</span>`:''} \u00b7 ${t.game_type}${t.end_date&&t.end_date!==t.start_date?` \u00b7 bis ${fmtDate(t.end_date)}`:''}</div>
         ${entry}
       </div>
@@ -262,13 +263,13 @@ function openTournamentModal(id=null){
   editingTournamentId=id;
   document.getElementById('tournament-modal-title').textContent=id?'Turnier bearbeiten':'Turnier hinzuf\u00fcgen';
   document.getElementById('global-toggle').style.display=currentUser.is_admin?'block':'none';
-  if(id){const t=allTournaments.find(x=>x.id===id);document.getElementById('t-name').value=t.name;document.getElementById('t-series').value=t.series||'';document.getElementById('t-location').value=t.location||'';document.getElementById('t-start').value=t.start_date||'';document.getElementById('t-end').value=t.end_date||'';document.getElementById('t-buyin').value=t.buy_in||'';document.getElementById('t-fieldsize').value=t.field_size||'';document.getElementById('t-game').value=t.game_type;document.getElementById('t-global').checked=t.is_global;}
-  else{['t-name','t-series','t-location','t-start','t-end','t-buyin','t-fieldsize'].forEach(i=>document.getElementById(i).value='');document.getElementById('t-global').checked=false;}
+  if(id){const t=allTournaments.find(x=>x.id===id);document.getElementById('t-name').value=t.name;document.getElementById('t-series').value=t.series||'';document.getElementById('t-location').value=t.location||'';document.getElementById('t-start').value=t.start_date||'';document.getElementById('t-end').value=t.end_date||'';document.getElementById('t-buyin').value=t.buy_in||'';document.getElementById('t-fieldsize').value=t.field_size||'';document.getElementById('t-game').value=t.game_type;document.getElementById('t-global').checked=t.is_global;document.getElementById('t-type').value=t.tournament_type||'Live';}
+  else{['t-name','t-series','t-location','t-start','t-end','t-buyin','t-fieldsize'].forEach(i=>document.getElementById(i).value='');document.getElementById('t-global').checked=false;document.getElementById('t-type').value='Live';}
   openModal('tournament-modal');
 }
 
 async function saveTournament(){
-  const body={name:document.getElementById('t-name').value,series:document.getElementById('t-series').value||null,location:document.getElementById('t-location').value||null,start_date:document.getElementById('t-start').value||null,end_date:document.getElementById('t-end').value||null,buy_in:parseFloat(document.getElementById('t-buyin').value)||null,field_size:parseInt(document.getElementById('t-fieldsize').value)||null,game_type:document.getElementById('t-game').value,is_global:document.getElementById('t-global').checked};
+  const body={name:document.getElementById('t-name').value,series:document.getElementById('t-series').value||null,location:document.getElementById('t-location').value||null,start_date:document.getElementById('t-start').value||null,end_date:document.getElementById('t-end').value||null,buy_in:parseFloat(document.getElementById('t-buyin').value)||null,field_size:parseInt(document.getElementById('t-fieldsize').value)||null,game_type:document.getElementById('t-game').value,tournament_type:document.getElementById('t-type').value,is_global:document.getElementById('t-global').checked};
   try{if(editingTournamentId)await api(`/tournaments/${editingTournamentId}`,'PUT',body);else await api('/tournaments/','POST',body);closeModal('tournament-modal');await loadTournaments();}
   catch(e){alert('Fehler: '+(e.detail||JSON.stringify(e)));}
 }
@@ -443,11 +444,8 @@ async function loadStats(){
   // Location-Filter: Turniere nach Location einschraenken, dann Stats neu berechnen
   let tsMonthly=ts.monthly||[];
   if(loc){
-    // Turnier-IDs mit dieser Location ermitteln
-    const matchIds=new Set(allTournaments.filter(t=>(t.location||'').toLowerCase().includes(loc.toLowerCase())).map(t=>t.id));
-    // Leider hat monthly keine tournament_id - wir rechnen direkt aus allTournaments+entries
-    // Vereinfachung: monthly nach Monat filtern basierend auf Turnier-Daten
-    const matchMonths=new Set(allTournaments.filter(t=>matchIds.has(t.id)&&t.start_date).map(t=>t.start_date.slice(0,7)));
+    // Typ-Filter (Live/Online): Turniere dieses Typs bestimmen, Monate ermitteln
+    const matchMonths=new Set(allTournaments.filter(t=>(t.tournament_type||'Live')===loc&&t.start_date).map(t=>t.start_date.slice(0,7)));
     tsMonthly=tsMonthly.filter(m=>matchMonths.has(m.month));
   }
   if(fromMonth) tsMonthly=tsMonthly.filter(m=>m.month>=fromMonth);
@@ -466,11 +464,7 @@ async function loadStats(){
   setVal('ts-profit',(tp>=0?'+':'')+'$'+Math.abs(tp).toFixed(2),tp>0?'pos':tp<0?'neg':'neutral');
   document.getElementById('ts-itm').textContent=tsItmRate;
   drawMonthlyChart('monthly-chart',monthly);
-  // Location-Dropdown aus allTournaments befuellen
-  const locSelect=document.getElementById('stats-location');
-  const currentLoc=locSelect.value;
-  const locs=[...new Set(allTournaments.map(t=>t.location).filter(Boolean))].sort();
-  locSelect.innerHTML='<option value="">Alle</option>'+locs.map(l=>`<option value="${l}" ${l===currentLoc?'selected':''}>${l}</option>`).join('');
+
 }
 
 function drawMonthlyChart(id,data){
