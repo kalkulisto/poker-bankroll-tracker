@@ -7,7 +7,6 @@ router = APIRouter(prefix="/stats", tags=["stats"])
 
 
 def effective_buyin(buy_in: float, reentries: int) -> float:
-    """Tatsaechlich bezahlter Buy-in inkl. Reentries."""
     return buy_in * (reentries + 1)
 
 
@@ -72,13 +71,28 @@ def get_monthly(current_user: dict = Depends(get_current_user)):
 
 
 @router.get("/tournaments")
-def get_tournament_stats(current_user: dict = Depends(get_current_user)):
+def get_tournament_stats(current_user: dict = Depends(get_current_user),
+                         tournament_type: str = "", from_date: str = "", to_date: str = ""):
     uid = int(current_user["id"])
     all_entries = sheets.all_rows("poker_entries")
     tournaments = {int(t["id"]): t for t in sheets.all_rows("poker_tournaments")}
 
     entries = [e for e in all_entries
                if int(e["user_id"]) == uid and int(e["tournament_id"]) in tournaments]
+
+    # Filter direkt auf Entry-Ebene (Typ + Datum)
+    def entry_matches(e):
+        t = tournaments[int(e["tournament_id"])]
+        if tournament_type and (t.get("tournament_type") or "Live") != tournament_type:
+            return False
+        date = t.get("start_date", "") or ""
+        if from_date and date < from_date:
+            return False
+        if to_date and date > to_date:
+            return False
+        return True
+
+    entries = [e for e in entries if entry_matches(e)]
 
     if not entries:
         return {"total_entered": 0, "total_invested": 0, "total_winnings": 0,
