@@ -433,12 +433,23 @@ async function loadStats(){
   setVal('s-hr',fmtMoney(sum.profit_per_hour)+'/h',sum.profit_per_hour>=0?'pos':'neg');
   setVal('s-bigwin','+$'+sum.biggest_win,'pos');
   setVal('s-bigloss','$'+sum.biggest_loss,'neg');
-  document.getElementById('ts-entered').textContent=ts.total_entered;
-  document.getElementById('ts-invested').textContent='$'+ts.total_invested;
-  document.getElementById('ts-winnings').textContent='$'+ts.total_winnings;
-  const tp=ts.tournament_profit;
-  setVal('ts-profit',(tp>=0?'+':'')+'$'+tp,tp>0?'pos':tp<0?'neg':'neutral');
-  document.getElementById('ts-itm').textContent=ts.itm_rate+'%';
+  // Turnier-Stats ebenfalls nach Zeitraum filtern (clientseitig via monthly)
+  const fromMonth=from?from.slice(0,7):'';
+  const toMonth=to?to.slice(0,7):'';
+  let tsMonthly=ts.monthly||[];
+  if(fromMonth) tsMonthly=tsMonthly.filter(m=>m.month>=fromMonth);
+  if(toMonth) tsMonthly=tsMonthly.filter(m=>m.month<=toMonth);
+  const tsEntered=tsMonthly.reduce((a,m)=>a+m.tournaments,0);
+  const tsInvested=tsMonthly.reduce((a,m)=>a+m.invested,0);
+  const tsProfit=tsMonthly.reduce((a,m)=>a+m.profit,0);
+  const tsWinnings=tsInvested+tsProfit;
+  const tsItm=from||to?'-':ts.itm_rate+'%';
+  document.getElementById('ts-entered').textContent=from||to?tsEntered:ts.total_entered;
+  document.getElementById('ts-invested').textContent='$'+(from||to?tsInvested.toFixed(0):ts.total_invested);
+  document.getElementById('ts-winnings').textContent='$'+(from||to?tsWinnings.toFixed(0):ts.total_winnings);
+  const tp=from||to?tsProfit:ts.tournament_profit;
+  setVal('ts-profit',(tp>=0?'+':'')+'$'+tp.toFixed(0),tp>0?'pos':tp<0?'neg':'neutral');
+  document.getElementById('ts-itm').textContent=from||to?(tsEntered>0?(tsMonthly.reduce((a,m)=>a+m.profit,0)>0?'>0%':'0%'):'0%'):ts.itm_rate+'%';
   drawMonthlyChart('monthly-chart',monthly);
 }
 
