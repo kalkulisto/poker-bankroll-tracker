@@ -1,0 +1,2 @@
+FIX IS LIVE:
+e-prize').value)||0,reentries:parseInt(document.getElementById('e-reentries').value)||0,notes:docume

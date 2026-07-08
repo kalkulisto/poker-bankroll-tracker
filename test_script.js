@@ -351,14 +351,12 @@ async function loadRangliste(){
       `<span class="badge-chip" title="${b.detail||b.label}">${b.icon} ${b.label} <span class="badge-count">${b.count}</span></span>`
     ).join('');
     return`<div class="lb-row" style="flex-direction:column;align-items:stretch;display:flex;gap:.4rem">
-      <div style="display:grid;grid-template-columns:2rem 1fr repeat(5,6rem);gap:.5rem;align-items:center">
+      <div style="display:grid;grid-template-columns:2rem 1fr repeat(3,5rem);gap:.5rem;align-items:center">
         <div class="lb-rank ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i<3?rankIcons[i]:i+1}</div>
         <div class="lb-name">${u.name}</div>
-        <div class="lb-val">${u.tournaments}</div>
         <div class="lb-val ${pCls}">${fmtMoney(u.total_profit)}</div>
         <div class="lb-val ${rCls}">${u.roi}%</div>
         <div class="lb-val">${u.itm_rate}%</div>
-        <div class="lb-val">${u.best_position?'#'+u.best_position:'\u2014'}</div>
       </div>
       ${badgesHtml?`<div class="player-badges">${badgesHtml}</div>`:''}
       ${(u.form&&u.form.length)?`<div class="form-row"><span class="form-label-mini">Form</span>${u.form.map(f=>`<span class="form-dot ${f.itm?'itm':'bust'}" title="${fmtDate(f.date)}: ${fmtMoney(f.profit)}"></span>`).join('')}</div>`:''}
@@ -386,7 +384,7 @@ async function loadRangliste(){
       <div class="shared-players">
         ${t.players.map(p=>`<div class="shared-player">
           <div class="shared-player-name">${p.name}</div>
-          <div class="shared-player-pos">${p.position?'#'+p.position:'\u2014'}</div>
+          <div class="shared-player-pos">${p.position?(t.field_size?'#'+p.position+' / '+t.field_size:'#'+p.position):'\u2014'}</div>
           ${p.prize_money>0?`<div class="shared-player-prize">$${p.prize_money} Preisgeld</div>`:''}
           <div class="shared-player-profit ${p.profit>0?'profit-pos':p.profit<0?'profit-neg':''}">${fmtMoney(p.profit)}</div>
         </div>`).join('')}

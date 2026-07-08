@@ -123,7 +123,7 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
 .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;}
 .section-title{font-size:1rem;font-weight:700;display:flex;align-items:center;gap:.5rem;}
 .filter-row{display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap;}
-.lb-header{display:grid;grid-template-columns:2rem 1fr repeat(5,6rem);gap:.5rem;padding:.5rem .75rem;font-size:.7rem;text-transform:uppercase;letter-spacing:.1rem;color:var(--muted);border-bottom:1px solid var(--border);}
+.lb-header{display:grid;grid-template-columns:2rem 1fr repeat(3,5rem);gap:.5rem;padding:.5rem .75rem;font-size:.7rem;text-transform:uppercase;letter-spacing:.1rem;color:var(--muted);border-bottom:1px solid var(--border);}
 .lb-row{display:grid;grid-template-columns:2rem 1fr repeat(5,6rem);gap:.5rem;padding:.75rem;border-bottom:1px solid #1a2a1a;align-items:center;}
 .lb-row:last-child{border-bottom:none;}
 .lb-row:hover{background:#141f14;}
@@ -187,9 +187,7 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
   .nav-btn{padding:.35rem .1rem;font-size:.68rem;text-align:center;border-radius:6px;}
   main{padding:1rem .75rem;}
   .tournament-item{grid-template-columns:1fr;}
-  .lb-header,.lb-row{grid-template-columns:2rem 1fr repeat(3,5rem);}
-  .lb-header>*:nth-child(5),.lb-row>*:nth-child(5),
-  .lb-header>*:nth-child(6),.lb-row>*:nth-child(6){display:none;}
+
 }
 @media(min-width:641px){
   .header-top{display:contents;}
@@ -324,11 +322,9 @@ main{max-width:1100px;margin:0 auto;padding:1.5rem;}
         <div class="panel" style="padding:.75rem">
           <div class="lb-header">
             <div>#</div><div>Spieler</div>
-            <div style="text-align:right">Turniere</div>
             <div style="text-align:right">Profit</div>
             <div style="text-align:right">ROI</div>
             <div style="text-align:right">ITM</div>
-            <div style="text-align:right">Best Platz</div>
           </div>
           <div id="lb-rows"></div>
         </div>
@@ -852,14 +848,12 @@ async function loadRangliste(){
       `<span class="badge-chip" title="${b.detail||b.label}">${b.icon} ${b.label} <span class="badge-count">${b.count}</span></span>`
     ).join('');
     return`<div class="lb-row" style="flex-direction:column;align-items:stretch;display:flex;gap:.4rem">
-      <div style="display:grid;grid-template-columns:2rem 1fr repeat(5,6rem);gap:.5rem;align-items:center">
+      <div style="display:grid;grid-template-columns:2rem 1fr repeat(3,5rem);gap:.5rem;align-items:center">
         <div class="lb-rank ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i<3?rankIcons[i]:i+1}</div>
         <div class="lb-name">${u.name}</div>
-        <div class="lb-val">${u.tournaments}</div>
         <div class="lb-val ${pCls}">${fmtMoney(u.total_profit)}</div>
         <div class="lb-val ${rCls}">${u.roi}%</div>
         <div class="lb-val">${u.itm_rate}%</div>
-        <div class="lb-val">${u.best_position?'#'+u.best_position:'\u2014'}</div>
       </div>
       ${badgesHtml?`<div class="player-badges">${badgesHtml}</div>`:''}
       ${(u.form&&u.form.length)?`<div class="form-row"><span class="form-label-mini">Form</span>${u.form.map(f=>`<span class="form-dot ${f.itm?'itm':'bust'}" title="${fmtDate(f.date)}: ${fmtMoney(f.profit)}"></span>`).join('')}</div>`:''}
@@ -887,7 +881,7 @@ async function loadRangliste(){
       <div class="shared-players">
         ${t.players.map(p=>`<div class="shared-player">
           <div class="shared-player-name">${p.name}</div>
-          <div class="shared-player-pos">${p.position?'#'+p.position:'\u2014'}</div>
+          <div class="shared-player-pos">${p.position?(t.field_size?'#'+p.position+' / '+t.field_size:'#'+p.position):'\u2014'}</div>
           ${p.prize_money>0?`<div class="shared-player-prize">$${p.prize_money} Preisgeld</div>`:''}
           <div class="shared-player-profit ${p.profit>0?'profit-pos':p.profit<0?'profit-neg':''}">${fmtMoney(p.profit)}</div>
         </div>`).join('')}
