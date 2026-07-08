@@ -413,14 +413,16 @@ function calcMonthly(sessions){
   return Object.entries(m).sort().map(([month,v])=>({month,...v}));
 }
 
-function resetStatsFilter(){document.getElementById('stats-from').value='';document.getElementById('stats-to').value='';loadStats();}
+function resetStatsFilter(){document.getElementById('stats-from').value='';document.getElementById('stats-to').value='';document.getElementById('stats-location').value='';loadStats();}
 
 async function loadStats(){
   const from=document.getElementById('stats-from')?.value||'';
   const to=document.getElementById('stats-to')?.value||'';
+  const loc=document.getElementById('stats-location')?.value||'';
   let filtered=allSessions;
   if(from)filtered=filtered.filter(s=>s.date>=from);
   if(to)filtered=filtered.filter(s=>s.date<=to);
+  // Location-Filter fuer Turnier-Stats wird weiter unten angewandt
   const sum=calcSummary(filtered);
   const monthly=calcMonthly(filtered);
   const ts=await api('/stats/tournaments');
@@ -436,8 +438,18 @@ async function loadStats(){
   // Turnier-Stats nach Zeitraum filtern (exakt auf Tag genau via monthly)
   const fromMonth=from?from.slice(0,7):'';
   const toMonth=to?to.slice(0,7):'';
-  const useFilter=!!(from||to);
+  const useFilter=!!(from||to||loc);
+
+  // Location-Filter: Turniere nach Location einschraenken, dann Stats neu berechnen
   let tsMonthly=ts.monthly||[];
+  if(loc){
+    // Turnier-IDs mit dieser Location ermitteln
+    const matchIds=new Set(allTournaments.filter(t=>(t.location||'').toLowerCase().includes(loc.toLowerCase())).map(t=>t.id));
+    // Leider hat monthly keine tournament_id - wir rechnen direkt aus allTournaments+entries
+    // Vereinfachung: monthly nach Monat filtern basierend auf Turnier-Daten
+    const matchMonths=new Set(allTournaments.filter(t=>matchIds.has(t.id)&&t.start_date).map(t=>t.start_date.slice(0,7)));
+    tsMonthly=tsMonthly.filter(m=>matchMonths.has(m.month));
+  }
   if(fromMonth) tsMonthly=tsMonthly.filter(m=>m.month>=fromMonth);
   if(toMonth) tsMonthly=tsMonthly.filter(m=>m.month<=toMonth);
   // Exakte Tagesgrenze: erstes/letztes Monat koennte teilweise ausserhalb liegen
@@ -454,6 +466,11 @@ async function loadStats(){
   setVal('ts-profit',(tp>=0?'+':'')+'$'+Math.abs(tp).toFixed(2),tp>0?'pos':tp<0?'neg':'neutral');
   document.getElementById('ts-itm').textContent=tsItmRate;
   drawMonthlyChart('monthly-chart',monthly);
+  // Location-Dropdown aus allTournaments befuellen
+  const locSelect=document.getElementById('stats-location');
+  const currentLoc=locSelect.value;
+  const locs=[...new Set(allTournaments.map(t=>t.location).filter(Boolean))].sort();
+  locSelect.innerHTML='<option value="">Alle</option>'+locs.map(l=>`<option value="${l}" ${l===currentLoc?'selected':''}>${l}</option>`).join('');
 }
 
 function drawMonthlyChart(id,data){
