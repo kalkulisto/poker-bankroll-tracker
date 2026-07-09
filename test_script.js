@@ -98,6 +98,7 @@ function showPage(name){
   if(name==='stats')loadStats();
   if(name==='rangliste')loadRangliste();
   if(name==='gesamt')loadGesamt();
+  if(name==='tournaments')loadTournaments();
 }
 
 // ── API ──
@@ -687,4 +688,4 @@ function spawnConfetti(){
 fetchUsers();
 if(token&&currentUser){enterApp();}else{document.getElementById('login-screen').style.display='flex';}
 window.addEventListener('resize',()=>{if(allSessions.length)renderDashboard();});
-setTFilter('upcoming');
+setTFilter('all');
