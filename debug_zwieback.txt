@@ -1,0 +1,11 @@
+=== Leaderboard ===
+ElChicoDe: profit=-8.23, tournaments=2
+XXzwiebackXX: profit=-40.0, tournaments=2
+
+=== Tournaments ===
+Turnier: Spieltag 2
+  ElChicoDe: pos=670 prize=0.0 reentries=0
+  XXzwiebackXX: pos=None prize=0.0 reentries=1
+Turnier: Spieltag 1
+  ElChicoDe: pos=200 prize=21.77 reentries=1
+  XXzwiebackXX: pos=498 prize=0.0 reentries=1
