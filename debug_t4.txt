@@ -1,0 +1,7 @@
+ID=4 Name=Spieltag 1 buy_in=10.0 type=Online entry={'id': 1, 'result_position': 200, 'prize_money': 21.77, 'reentries': 1, 'notes': None}
+ID=5 Name=Spieltag 2 buy_in=10.0 type=Online entry={'id': 3, 'result_position': 843, 'prize_money': 0.0, 'reentries': 0, 'notes': '55<AK'}
+ID=6 Name=Spieltag 3 buy_in=10.0 type=Online entry={'id': 5, 'result_position': 1289, 'prize_money': 0.0, 'reentries': 0, 'notes': '99<JJ'}
+ID=7 Name=Team WM Spieltag 4 buy_in=10.8 type=Online entry={'id': 7, 'result_position': None, 'prize_money': 0.0, 'reentries': 0, 'notes': None}
+
+Neuestes Turnier: ID=7
+PUT result: {'id': 7, 'result_position': None, 'prize_money': 0.0, 'reentries': 0}

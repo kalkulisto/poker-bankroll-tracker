@@ -17,28 +17,50 @@ SHEET_SCHEMAS = {
     "poker_entries":     ["id", "user_id", "tournament_id", "result_position", "prize_money", "reentries", "notes", "created_at"],
 }
 
+# Caching fuer Client und Spreadsheet
+_client = None
+_spreadsheet = None
+_worksheets = {}
+
 
 def get_client():
-    creds_json = os.environ.get("GOOGLE_CREDENTIALS")
-    if creds_json:
-        creds = Credentials.from_service_account_info(json.loads(creds_json), scopes=SCOPES)
-    else:
-        creds = Credentials.from_service_account_file("freckenhorst2-4eb32a77e61f.json", scopes=SCOPES)
-    return gspread.authorize(creds)
+    global _client
+    if _client is None:
+        creds_json = os.environ.get("GOOGLE_CREDENTIALS")
+        if creds_json:
+            creds = Credentials.from_service_account_info(json.loads(creds_json), scopes=SCOPES)
+        else:
+            creds = Credentials.from_service_account_file("freckenhorst2-4eb32a77e61f.json", scopes=SCOPES)
+        _client = gspread.authorize(creds)
+    return _client
 
 
 def get_spreadsheet():
-    return get_client().open_by_key(SPREADSHEET_ID)
+    global _spreadsheet
+    if _spreadsheet is None:
+        _spreadsheet = get_client().open_by_key(SPREADSHEET_ID)
+    return _spreadsheet
 
 
 def get_sheet(name: str):
-    ss = get_spreadsheet()
-    try:
-        ws = ss.worksheet(name)
-    except gspread.WorksheetNotFound:
-        ws = ss.add_worksheet(title=name, rows=1000, cols=len(SHEET_SCHEMAS[name]))
-        ws.append_row(SHEET_SCHEMAS[name])
-    return ws
+    global _worksheets
+    if name not in _worksheets:
+        ss = get_spreadsheet()
+        try:
+            ws = ss.worksheet(name)
+        except gspread.WorksheetNotFound:
+            ws = ss.add_worksheet(title=name, rows=1000, cols=len(SHEET_SCHEMAS[name]))
+            ws.append_row(SHEET_SCHEMAS[name])
+        _worksheets[name] = ws
+    return _worksheets[name]
+
+
+def reset_cache():
+    """Cache zuruecksetzen bei Verbindungsfehlern."""
+    global _client, _spreadsheet, _worksheets
+    _client = None
+    _spreadsheet = None
+    _worksheets = {}
 
 
 def _ensure_columns(ws, schema: list[str]):
@@ -46,8 +68,9 @@ def _ensure_columns(ws, schema: list[str]):
     missing = [col for col in schema if col not in actual]
     if missing:
         for col in missing:
+            col_idx = len(actual) + missing.index(col) + 1
             ws.add_cols(1)
-            ws.update_cell(1, len(actual) + missing.index(col) + 1, col)
+            ws.update_cell(1, col_idx, col)
 
 
 def init_sheets():
@@ -56,9 +79,20 @@ def init_sheets():
         _ensure_columns(ws, schema)
 
 
+def _safe_call(fn, *args, **kwargs):
+    """Wiederholung bei Verbindungsfehlern mit Cache-Reset."""
+    try:
+        return fn(*args, **kwargs)
+    except Exception as e:
+        if "RESOURCE_EXHAUSTED" in str(e) or "quota" in str(e).lower() or "connection" in str(e).lower():
+            reset_cache()
+            return fn(*args, **kwargs)
+        raise
+
+
 def all_rows(sheet_name: str) -> list[dict]:
     ws = get_sheet(sheet_name)
-    return ws.get_all_records()
+    return _safe_call(ws.get_all_records)
 
 
 def get_row(sheet_name: str, row_id: int) -> dict | None:
@@ -77,31 +111,31 @@ def next_id(sheet_name: str) -> int:
 
 def insert_row(sheet_name: str, data: dict) -> dict:
     ws = get_sheet(sheet_name)
-    headers = ws.row_values(1)
+    headers = _safe_call(ws.row_values, 1)
     row = [str(data.get(h, "")) for h in headers]
-    ws.append_row(row)
+    _safe_call(ws.append_row, row)
     return data
 
 
 def update_row(sheet_name: str, row_id: int, data: dict):
     ws = get_sheet(sheet_name)
-    headers = ws.row_values(1)
-    records = ws.get_all_records()
+    headers = _safe_call(ws.row_values, 1)
+    records = _safe_call(ws.get_all_records)
     for i, r in enumerate(records):
         if int(r["id"]) == row_id:
             sheet_row = i + 2
             for col_idx, header in enumerate(headers, start=1):
                 if header in data:
-                    ws.update_cell(sheet_row, col_idx, str(data[header]))
+                    _safe_call(ws.update_cell, sheet_row, col_idx, str(data[header]))
             return True
     return False
 
 
 def delete_row(sheet_name: str, row_id: int):
     ws = get_sheet(sheet_name)
-    records = ws.get_all_records()
+    records = _safe_call(ws.get_all_records)
     for i, r in enumerate(records):
         if int(r["id"]) == row_id:
-            ws.delete_rows(i + 2)
+            _safe_call(ws.delete_rows, i + 2)
             return True
     return False
