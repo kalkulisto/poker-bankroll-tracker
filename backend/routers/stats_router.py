@@ -10,6 +10,11 @@ def effective_buyin(buy_in: float, reentries: int) -> float:
     return buy_in * (reentries + 1)
 
 
+def is_challenge_eligible(t: dict) -> bool:
+    val = t.get("challenge_eligible", "True")
+    return str(val).lower() != "false"
+
+
 @router.get("/summary")
 def get_summary(current_user: dict = Depends(get_current_user)):
     uid = int(current_user["id"])
@@ -80,7 +85,6 @@ def get_tournament_stats(current_user: dict = Depends(get_current_user),
     entries = [e for e in all_entries
                if int(e["user_id"]) == uid and int(e["tournament_id"]) in tournaments]
 
-    # Filter direkt auf Entry-Ebene (Typ + Datum)
     def entry_matches(e):
         t = tournaments[int(e["tournament_id"])]
         if tournament_type and (t.get("tournament_type") or "Live") != tournament_type:
@@ -210,8 +214,13 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
     for e in valid_entries:
         by_tournament[int(e["tournament_id"])].append(e)
 
+    # Alle gemeinsamen Turniere (fuer Leaderboard-Stats)
     shared = {tid: entries for tid, entries in by_tournament.items()
               if len(set(int(e["user_id"]) for e in entries)) >= 2}
+
+    # Nur Challenge-eligible Turniere fuer den Fortschrittsbalken
+    shared_challenge = {tid: entries for tid, entries in shared.items()
+                        if is_challenge_eligible(all_tournaments.get(tid, {}))}
 
     user_stats = defaultdict(lambda: {
         "total_profit": 0.0, "total_invested": 0.0, "total_winnings": 0.0,
@@ -232,6 +241,7 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
         base_buy_in = float(t["buy_in"] or 0)
         field_size = int(t["field_size"]) if t.get("field_size") else None
         t_date = t.get("start_date", "") or ""
+        eligible = is_challenge_eligible(t)
         players = []
         for e in entries:
             uid = int(e["user_id"])
@@ -271,6 +281,7 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
             "id": tid, "name": t["name"], "series": t["series"] or None,
             "start_date": t["start_date"] or None, "buy_in": base_buy_in,
             "field_size": field_size, "players": players,
+            "challenge_eligible": eligible,
         })
 
     leaderboard = []
@@ -309,13 +320,13 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
     leaderboard.sort(key=lambda x: x["total_profit"], reverse=True)
 
     CHALLENGE_TARGET = 100
-    shared_count = len(shared)
+    challenge_count = len(shared_challenge)  # Nur eligible Turniere
     leader = leaderboard[0] if leaderboard else None
     challenge = {
         "target": CHALLENGE_TARGET,
-        "played": shared_count,
-        "remaining": max(0, CHALLENGE_TARGET - shared_count),
-        "progress_pct": round(min(100, shared_count / CHALLENGE_TARGET * 100), 1),
+        "played": challenge_count,
+        "remaining": max(0, CHALLENGE_TARGET - challenge_count),
+        "progress_pct": round(min(100, challenge_count / CHALLENGE_TARGET * 100), 1),
         "leader_name": leader["name"] if leader else None,
         "gap": round(leaderboard[0]["total_profit"] - leaderboard[1]["total_profit"], 2) if len(leaderboard) >= 2 else 0,
     }
