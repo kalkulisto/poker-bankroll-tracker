@@ -107,7 +107,7 @@ def get_tournament_stats(current_user: dict = Depends(get_current_user),
                         int(e.get("reentries") or 0))
         for e in entries)
     total_winnings = sum(float(e["prize_money"] or 0) for e in entries)
-    itm = len([e for e in entries if float(e["prize_money"] or 0) > 0])
+    itm = len([e for e in entries if float(e["prize_money"] or 0) > effective_buyin(float(tournaments[int(e["tournament_id"])]["buy_in"] or 0), int(e.get("reentries") or 0))])
 
     monthly = defaultdict(lambda: {"profit": 0, "tournaments": 0, "invested": 0})
     for e in entries:
@@ -259,8 +259,8 @@ def get_leaderboard(current_user: dict = Depends(get_current_user)):
             user_stats[uid]["total_invested"] += buy_in
             user_stats[uid]["total_winnings"] += prize
             user_stats[uid]["total_profit"] += profit
-            user_results[uid].append({"date": t_date, "itm": prize > 0, "profit": round(profit, 2)})
-            if prize > 0:
+            user_results[uid].append({"date": t_date, "itm": prize > effective_buyin(base_buy_in, reentries), "profit": round(profit, 2)})
+            if prize > effective_buyin(base_buy_in, reentries):
                 user_stats[uid]["itm"] += 1
             if pos:
                 if user_stats[uid]["best_position"] is None or pos < user_stats[uid]["best_position"]:
